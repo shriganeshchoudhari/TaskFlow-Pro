@@ -1,0 +1,155 @@
+### TaskFlow Pro - REST Client API Requests
+### VS Code REST Client Extension
+
+### ─── Variables ────────────────────────────────────────────────────────────
+@baseUrl = http://localhost:8080/api/v1
+@contentType = application/json
+# After login, manually set this:
+@accessToken = YOUR_ACCESS_TOKEN_HERE
+@refreshToken = YOUR_REFRESH_TOKEN_HERE
+@projectId = YOUR_PROJECT_ID_HERE
+@taskId = YOUR_TASK_ID_HERE
+
+### ─── 1. Register New User ────────────────────────────────────────────────
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "fullName": "Jane Smith",
+  "email": "jane@example.com",
+  "password": "TestPass123!"
+}
+
+### ─── 2. Login ────────────────────────────────────────────────────────────
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "jane@example.com",
+  "password": "TestPass123!"
+}
+
+### ─── 3. Refresh Token ─────────────────────────────────────────────────────
+POST {{baseUrl}}/auth/refresh
+Content-Type: {{contentType}}
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+### ─── 4. Get My Profile ────────────────────────────────────────────────────
+GET {{baseUrl}}/users/me
+Authorization: Bearer {{accessToken}}
+Accept: {{contentType}}
+
+### ─── 5. Create Project ────────────────────────────────────────────────────
+POST {{baseUrl}}/projects
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "name": "My First Project",
+  "description": "A test project created via REST client",
+  "visibility": "PRIVATE",
+  "status": "ACTIVE"
+}
+
+### ─── 6. Get All Projects ──────────────────────────────────────────────────
+GET {{baseUrl}}/projects?page=0&size=10&status=ACTIVE
+Authorization: Bearer {{accessToken}}
+Accept: {{contentType}}
+
+### ─── 7. Get Project by ID ─────────────────────────────────────────────────
+GET {{baseUrl}}/projects/{{projectId}}
+Authorization: Bearer {{accessToken}}
+
+### ─── 8. Create Task ──────────────────────────────────────────────────────
+POST {{baseUrl}}/projects/{{projectId}}/tasks
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "title": "Implement login page",
+  "description": "Create a responsive login form with validation",
+  "priority": "HIGH",
+  "status": "TODO",
+  "dueDate": "2025-12-31",
+  "tags": ["frontend", "auth"]
+}
+
+### ─── 9. Get Tasks in Project ──────────────────────────────────────────────
+GET {{baseUrl}}/projects/{{projectId}}/tasks?page=0&size=20
+Authorization: Bearer {{accessToken}}
+
+### ─── 10. Get Task by ID ───────────────────────────────────────────────────
+GET {{baseUrl}}/tasks/{{taskId}}
+Authorization: Bearer {{accessToken}}
+
+### ─── 11. Update Task Status ──────────────────────────────────────────────
+PATCH {{baseUrl}}/tasks/{{taskId}}/status
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "status": "IN_PROGRESS"
+}
+
+### ─── 12. Update Task Details ─────────────────────────────────────────────
+PUT {{baseUrl}}/tasks/{{taskId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "title": "Updated task title",
+  "priority": "CRITICAL",
+  "description": "Updated description with more details"
+}
+
+### ─── 13. Add Comment to Task ─────────────────────────────────────────────
+POST {{baseUrl}}/tasks/{{taskId}}/comments
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "content": "Working on this now! Will have a PR ready by EOD."
+}
+
+### ─── 14. Get Comments ─────────────────────────────────────────────────────
+GET {{baseUrl}}/tasks/{{taskId}}/comments
+Authorization: Bearer {{accessToken}}
+
+### ─── 15. Get Notifications ───────────────────────────────────────────────
+GET {{baseUrl}}/notifications?page=0&size=20&isRead=false
+Authorization: Bearer {{accessToken}}
+
+### ─── 16. Mark All Notifications Read ─────────────────────────────────────
+PATCH {{baseUrl}}/notifications/read-all
+Authorization: Bearer {{accessToken}}
+
+### ─── 17. Get Project Activity ─────────────────────────────────────────────
+GET {{baseUrl}}/projects/{{projectId}}/activities?page=0&size=20
+Authorization: Bearer {{accessToken}}
+
+### ─── 18. Add Member to Project ────────────────────────────────────────────
+POST {{baseUrl}}/projects/{{projectId}}/members
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "email": "developer@example.com",
+  "role": "MEMBER"
+}
+
+### ─── 19. Delete Task ──────────────────────────────────────────────────────
+DELETE {{baseUrl}}/tasks/{{taskId}}
+Authorization: Bearer {{accessToken}}
+
+### ─── 20. Logout ──────────────────────────────────────────────────────────
+POST {{baseUrl}}/auth/logout
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "refreshToken": "{{refreshToken}}"
+}

@@ -1,0 +1,37 @@
+name: E2E Tests
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "tests/e2e/**"
+      - ".github/workflows/e2e-tests.yml"
+
+jobs:
+  playwright:
+    # Only run when a Playwright project is actually present.
+    if: ${{ hashFiles('tests/e2e/playwright/package.json') != '' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tests/e2e/playwright
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: tests/e2e/playwright/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Install browsers
+        run: npx playwright install --with-deps
+
+      - name: Run tests
+        run: npx playwright test
+

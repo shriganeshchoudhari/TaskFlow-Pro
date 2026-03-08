@@ -1,0 +1,5 @@
+backend:
+  image: taskflow-backend:latest
+frontend:
+  image: taskflow-frontend:latest
+

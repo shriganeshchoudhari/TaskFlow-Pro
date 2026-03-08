@@ -1,0 +1,238 @@
+{
+  "info": {
+    "name": "TaskFlow Pro API",
+    "description": "Complete API test collection for TaskFlow Pro",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080/api/v1" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" },
+    { "key": "projectId", "value": "" },
+    { "key": "taskId", "value": "" },
+    { "key": "commentId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "TC-AUTH-001: Register User",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/register",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"fullName\":\"Test User\",\"email\":\"test_{{$randomInt}}@example.com\",\"password\":\"TestPass123!\"}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                "pm.test('Has id', () => pm.expect(pm.response.json().id).to.be.a('string'));",
+                "pm.test('Role is MEMBER', () => pm.expect(pm.response.json().role).to.equal('MEMBER'));",
+                "pm.test('No password in response', () => pm.expect(pm.response.json()).to.not.have.property('password'));"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "TC-AUTH-004: Login Success",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"test@example.com\",\"password\":\"TestPass123!\"}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                "const data = pm.response.json();",
+                "pm.test('Has accessToken', () => pm.expect(data.accessToken).to.be.a('string'));",
+                "pm.test('Has refreshToken', () => pm.expect(data.refreshToken).to.be.a('string'));",
+                "pm.test('tokenType is Bearer', () => pm.expect(data.tokenType).to.equal('Bearer'));",
+                "pm.test('expiresIn is 900', () => pm.expect(data.expiresIn).to.equal(900));",
+                "pm.collectionVariables.set('accessToken', data.accessToken);",
+                "pm.collectionVariables.set('refreshToken', data.refreshToken);"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "TC-AUTH-005: Login Wrong Password",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"test@example.com\",\"password\":\"wrongpassword\"}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 401', () => pm.response.to.have.status(401));",
+                "pm.test('Error message', () => pm.expect(pm.response.json().message).to.include('Invalid'));"
+              ]
+            }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "Projects",
+      "item": [
+        {
+          "name": "TC-PROJ-001: Create Project",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/projects",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Test Project\",\"description\":\"API test project\",\"visibility\":\"PRIVATE\"}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                "const data = pm.response.json();",
+                "pm.test('Has id', () => pm.expect(data.id).to.be.a('string'));",
+                "pm.test('Status is ACTIVE', () => pm.expect(data.status).to.equal('ACTIVE'));",
+                "pm.collectionVariables.set('projectId', data.id);"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "TC-PROJ-002: Get All Projects",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/projects?page=0&size=10",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                "const data = pm.response.json();",
+                "pm.test('Has content array', () => pm.expect(data.content).to.be.an('array'));",
+                "pm.test('Has totalElements', () => pm.expect(data.totalElements).to.be.a('number'));"
+              ]
+            }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "Tasks",
+      "item": [
+        {
+          "name": "TC-TASK-001: Create Task",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/projects/{{projectId}}/tasks",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"Implement feature X\",\"description\":\"Detailed description\",\"priority\":\"HIGH\",\"status\":\"TODO\"}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                "const data = pm.response.json();",
+                "pm.test('Title matches', () => pm.expect(data.title).to.equal('Implement feature X'));",
+                "pm.test('Status is TODO', () => pm.expect(data.status).to.equal('TODO'));",
+                "pm.test('Priority is HIGH', () => pm.expect(data.priority).to.equal('HIGH'));",
+                "pm.collectionVariables.set('taskId', data.id);"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "TC-TASK-005: Update Task Status",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/tasks/{{taskId}}/status",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\":\"IN_PROGRESS\"}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                "pm.test('Status updated', () => pm.expect(pm.response.json().status).to.equal('IN_PROGRESS'));"
+              ]
+            }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "Error Cases",
+      "item": [
+        {
+          "name": "TC-ERR-002: Resource Not Found",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/projects/00000000-0000-0000-0000-000000000000",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                "pm.test('Error is NOT_FOUND', () => pm.expect(pm.response.json().error).to.equal('NOT_FOUND'));"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "TC-ERR-003: No Token",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/projects"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 401', () => pm.response.to.have.status(401));"
+              ]
+            }
+          }]
+        }
+      ]
+    }
+  ]
+}
