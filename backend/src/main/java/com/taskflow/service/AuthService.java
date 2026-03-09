@@ -5,11 +5,13 @@ import com.taskflow.dto.request.RefreshTokenRequest;
 import com.taskflow.dto.request.RegisterRequest;
 import com.taskflow.dto.response.AuthResponse;
 import com.taskflow.dto.response.UserResponse;
+import com.taskflow.exception.ConflictException;
 import com.taskflow.exception.ResourceNotFoundException;
 import com.taskflow.exception.UnauthorizedException;
 import com.taskflow.model.User;
 import com.taskflow.repository.UserRepository;
 import com.taskflow.security.JwtTokenProvider;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -32,7 +34,7 @@ public class AuthService {
     @Transactional
     public UserResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new UnauthorizedException("Email address already registered");
+            throw new ConflictException("Email address already registered");
         }
 
         User user = User.builder()

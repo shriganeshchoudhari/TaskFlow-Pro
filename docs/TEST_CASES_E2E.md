@@ -1,558 +1,148 @@
-# TaskFlow Pro — E2E Test Cases (Playwright)
+# TaskFlow Pro — Test Cases: E2E
 
-**Tool:** Playwright 1.40+  
-**Framework:** TypeScript  
-**Test Location:** `tests/e2e/playwright/tests/`
-
----
-
-## Table of Contents
-1. [Test Setup](#1-test-setup)
-2. [Auth Scenarios](#2-auth-scenarios)
-3. [Project Scenarios](#3-project-scenarios)
-4. [Task Scenarios](#4-task-scenarios)
-5. [Comment & Notification Scenarios](#5-comment--notification-scenarios)
-6. [Responsive & Accessibility Scenarios](#6-responsive--accessibility-scenarios)
-7. [Page Object Models](#7-page-object-models)
+**Version:** 1.0.0  
+**Tool:** Playwright 1.40  
+**Config:** `tests/e2e/playwright/playwright.config.ts`  
+**Browser:** Chromium (default) + Firefox (auth suite)  
+**Implementation Task:** T6-05
 
 ---
 
-## 1. Test Setup
+## Setup
 
-### playwright.config.ts
-```typescript
-import { defineConfig, devices } from '@playwright/test';
+```bash
+cd tests/e2e/playwright
+npm ci
+npx playwright install --with-deps
 
-export default defineConfig({
-  testDir: './tests',
-  fullyParallel: true,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
-  reporter: [['html'], ['list']],
-  use: {
-    baseURL: process.env.E2E_BASE_URL || 'http://localhost:5173',
-    trace: 'on-first-retry',
-    screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
-  },
-  projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-    {
-      name: 'mobile',
-      use: { ...devices['Pixel 5'] },
-    },
-  ],
-});
+# Run all tests (headless)
+npx playwright test
+
+# Run with UI mode
+npx playwright test --ui
+
+# Run specific suite
+npx playwright test --grep "Authentication"
+
+# Run on mobile viewport
+npx playwright test --project="Mobile Chrome"
+
+# Debug single test
+npx playwright test taskflow.spec.ts --debug
 ```
 
-### Global Test Fixtures (fixtures/auth.ts)
-```typescript
-import { test as base, Page } from '@playwright/test';
-
-type AuthFixtures = {
-  authenticatedPage: Page;
-  managerPage: Page;
-};
-
-export const test = base.extend<AuthFixtures>({
-  authenticatedPage: async ({ page }, use) => {
-    await page.goto('/login');
-    await page.fill('[data-testid="email-input"]', 'member@test.com');
-    await page.fill('[data-testid="password-input"]', 'TestPass123!');
-    await page.click('[data-testid="login-button"]');
-    await page.waitForURL('/dashboard');
-    await use(page);
-  },
-  managerPage: async ({ page }, use) => {
-    await page.goto('/login');
-    await page.fill('[data-testid="email-input"]', 'manager@test.com');
-    await page.fill('[data-testid="password-input"]', 'TestPass123!');
-    await page.click('[data-testid="login-button"]');
-    await page.waitForURL('/dashboard');
-    await use(page);
-  },
-});
+**Environment variables:**
+```
+E2E_BASE_URL=http://localhost:5173       # local dev
+E2E_API_URL=http://localhost:8080/api/v1
+E2E_TEST_EMAIL=e2e-test@taskflow.local
+E2E_TEST_PASSWORD=E2eTest@1234
 ```
 
 ---
 
-## 2. Auth Scenarios
+## Suite 1: Authentication (Phase 1)
 
-### TC-E2E-AUTH-001: Successful Login
-
-```typescript
-test('TC-E2E-AUTH-001: User can log in with valid credentials', async ({ page }) => {
-  // Arrange
-  await page.goto('/login');
-
-  // Act
-  await page.fill('[data-testid="email-input"]', 'jane@example.com');
-  await page.fill('[data-testid="password-input"]', 'TestPass123!');
-  await page.click('[data-testid="login-button"]');
-
-  // Assert
-  await expect(page).toHaveURL('/dashboard');
-  await expect(page.locator('[data-testid="user-menu"]')).toBeVisible();
-  await expect(page.locator('[data-testid="nav-bar"]')).toContainText('Jane Smith');
-});
-```
+| # | Scenario | Steps | Expected |
+|---|----------|-------|----------|
+| E2E-AUTH-01 | Successful user registration | 1. Go to /register · 2. Fill fullName, email, password, confirm · 3. Check terms · 4. Click Create Account | Redirect to /login; success toast shown |
+| E2E-AUTH-02 | Login with valid credentials | 1. Go to /login · 2. Enter email + password · 3. Click Sign In | Redirect to /dashboard; NavBar shows user avatar |
+| E2E-AUTH-03 | Login with invalid password | 1. Go to /login · 2. Enter correct email + wrong password · 3. Click Sign In | Error alert shown; still on /login |
+| E2E-AUTH-04 | Protected route redirect | 1. Open /dashboard without logging in | Redirect to /login automatically |
+| E2E-AUTH-05 | Logout | 1. Login · 2. Click avatar menu · 3. Click Sign Out | Redirect to /login; navbar cleared |
 
 ---
 
-### TC-E2E-AUTH-002: Failed Login Shows Error
+## Suite 2: Project Management (Phase 2)
 
-```typescript
-test('TC-E2E-AUTH-002: Invalid credentials show error message', async ({ page }) => {
-  await page.goto('/login');
-  await page.fill('[data-testid="email-input"]', 'jane@example.com');
-  await page.fill('[data-testid="password-input"]', 'wrongpassword');
-  await page.click('[data-testid="login-button"]');
-
-  await expect(page.locator('[data-testid="error-alert"]')).toBeVisible();
-  await expect(page.locator('[data-testid="error-alert"]')).toContainText('Invalid email or password');
-  await expect(page).toHaveURL('/login');
-});
-```
+| # | Scenario | Steps | Expected |
+|---|----------|-------|----------|
+| E2E-PROJ-01 | Create a project | 1. Login · 2. Click "+ New Project" · 3. Fill name + description · 4. Submit | Project card appears in list; detail page accessible |
+| E2E-PROJ-02 | View project list | 1. Login with projects already created | Project grid renders; each card shows name, status, progress |
+| E2E-PROJ-03 | Filter projects by status | 1. Login · 2. Click "Active" status chip | Only ACTIVE projects shown |
+| E2E-PROJ-04 | Search projects by name | 1. Login · 2. Type partial name in search field | Matching projects shown; others hidden |
+| E2E-PROJ-05 | Invite member by email | 1. Open project detail · 2. Go to Members tab · 3. Enter email · 4. Click Invite | New member appears in list with MEMBER role |
+| E2E-PROJ-06 | Archive project | 1. Open project · 2. Open kebab menu · 3. Click Archive | Project disappears from ACTIVE filter; visible in ARCHIVED |
+| E2E-PROJ-07 | Non-member cannot access private project | 1. Login as user B · 2. Navigate to project URL owned by user A | 403 / redirect shown; project detail not visible |
 
 ---
 
-### TC-E2E-AUTH-003: Registration Flow
+## Suite 3: Task Management (Phase 3)
 
-```typescript
-test('TC-E2E-AUTH-003: New user can register an account', async ({ page }) => {
-  const email = `test_${Date.now()}@example.com`;
-
-  await page.goto('/register');
-  await page.fill('[data-testid="fullname-input"]', 'New Test User');
-  await page.fill('[data-testid="email-input"]', email);
-  await page.fill('[data-testid="password-input"]', 'TestPass123!');
-  await page.fill('[data-testid="confirm-password-input"]', 'TestPass123!');
-  await page.check('[data-testid="terms-checkbox"]');
-  await page.click('[data-testid="register-button"]');
-
-  // After registration, redirected to login with success message
-  await expect(page).toHaveURL('/login');
-  await expect(page.locator('[data-testid="success-alert"]')).toContainText('Account created');
-});
-```
+| # | Scenario | Steps | Expected |
+|---|----------|-------|----------|
+| E2E-TASK-01 | Create a task | 1. Open project board · 2. Click "+ Add Task" in TODO column · 3. Fill title + priority + due date · 4. Assign to self · 5. Submit | Task card appears in TODO column |
+| E2E-TASK-02 | Drag task to IN PROGRESS (v1.1) / Click status chip | 1. Click status chip on task card · 2. Select IN_PROGRESS | Task moves to IN_PROGRESS column; activity logged |
+| E2E-TASK-03 | View task detail | 1. Click task card | Task detail page opens; breadcrumb shows Project > Task |
+| E2E-TASK-04 | Edit task inline | 1. Open task detail · 2. Click title to edit · 3. Change + blur | Title updates without page reload |
+| E2E-TASK-05 | Change task priority | 1. Open task detail · 2. Click priority chip · 3. Select HIGH | Priority updates; left border colour changes |
+| E2E-TASK-06 | Invalid status transition (UI guard) | 1. Open TODO task detail · 2. Try to select DONE from status dropdown | DONE disabled or error toast shown; status stays TODO |
+| E2E-TASK-07 | My Tasks page | 1. Login as assigned user · 2. Navigate to /my-tasks | Only tasks assigned to current user shown |
+| E2E-TASK-08 | List view — sort by priority | 1. Open project · 2. Click "List" tab · 3. Click Priority column header | Tasks sorted by priority descending |
 
 ---
 
-### TC-E2E-AUTH-004: Protected Route Redirect
+## Suite 4: Comments & Notifications (Phase 4)
 
-```typescript
-test('TC-E2E-AUTH-004: Unauthenticated user is redirected to login', async ({ page }) => {
-  await page.goto('/dashboard');
-  await expect(page).toHaveURL('/login');
-
-  await page.goto('/projects');
-  await expect(page).toHaveURL('/login');
-});
-```
+| # | Scenario | Steps | Expected |
+|---|----------|-------|----------|
+| E2E-NOTIF-01 | Comment creates notification | 1. User A opens task · 2. Posts comment · 3. User B (assignee) checks bell | Bell badge increments for user B |
+| E2E-NOTIF-02 | Click notification navigates | 1. User B clicks notification | Dropdown closes; navigates to task detail |
+| E2E-NOTIF-03 | Mark all notifications read | 1. User B has unread notifs · 2. Opens dropdown · 3. Clicks "Mark all read" | Badge disappears; all notifs show as read |
+| E2E-NOTIF-04 | Task assignment notification | 1. MANAGER assigns task to User C | User C's bell badge shows TASK_ASSIGNED notification |
+| E2E-NOTIF-05 | Edit own comment | 1. User posts comment · 2. Clicks edit icon · 3. Changes text · 4. Saves | Comment shows updated text + "(edited)" indicator |
 
 ---
 
-### TC-E2E-AUTH-005: Logout Flow
+## Suite 5: Dashboard (Phase 5)
 
-```typescript
-test('TC-E2E-AUTH-005: User can log out', async ({ authenticatedPage: page }) => {
-  await page.click('[data-testid="user-menu"]');
-  await page.click('[data-testid="logout-button"]');
-
-  await expect(page).toHaveURL('/login');
-
-  // Verify can't access protected route
-  await page.goto('/dashboard');
-  await expect(page).toHaveURL('/login');
-});
-```
+| # | Scenario | Steps | Expected |
+|---|----------|-------|----------|
+| E2E-DASH-01 | Dashboard loads correctly | 1. Login · 2. Navigate to /dashboard | 4 stat cards visible with numeric values; no loading skeletons remaining |
+| E2E-DASH-02 | My Tasks widget links | 1. Dashboard loaded · 2. Click a task row in My Tasks widget | Navigates to task detail page |
+| E2E-DASH-03 | My Projects "See all" link | 1. Dashboard loaded · 2. Click "See all" link | Navigates to /projects |
 
 ---
 
-## 3. Project Scenarios
+## Suite 6: Profile (Phase 5)
 
-### TC-E2E-PROJ-001: Create New Project
-
-```typescript
-test('TC-E2E-PROJ-001: Manager can create a new project', async ({ managerPage: page }) => {
-  await page.goto('/projects');
-  await page.click('[data-testid="new-project-button"]');
-
-  // Fill project form
-  await page.fill('[data-testid="project-name-input"]', 'E2E Test Project');
-  await page.fill('[data-testid="project-description-input"]', 'Created by E2E test');
-  await page.selectOption('[data-testid="visibility-select"]', 'PRIVATE');
-  await page.click('[data-testid="submit-project-button"]');
-
-  // Verify redirect to project detail
-  await page.waitForURL(/\/projects\/[a-z0-9-]+$/);
-  await expect(page.locator('[data-testid="project-title"]')).toContainText('E2E Test Project');
-  await expect(page.locator('[data-testid="project-status-badge"]')).toContainText('ACTIVE');
-});
-```
+| # | Scenario | Steps | Expected |
+|---|----------|-------|----------|
+| E2E-PROF-01 | Update display name | 1. Navigate to /profile · 2. Edit full name · 3. Save | NavBar shows updated name immediately |
+| E2E-PROF-02 | Change password | 1. Navigate to /profile · 2. Fill current + new + confirm password · 3. Save | Success toast; old password no longer works |
+| E2E-PROF-03 | Wrong current password | 1. /profile · 2. Enter incorrect current password | Error message shown below field |
 
 ---
 
-### TC-E2E-PROJ-002: Project List — Filter by Status
+## Suite 7: Responsive / Mobile (Phase 5)
 
-```typescript
-test('TC-E2E-PROJ-002: User can filter projects by status', async ({ authenticatedPage: page }) => {
-  await page.goto('/projects');
+*Run on Mobile Chrome viewport (375×812)*
 
-  // Click Active filter
-  await page.click('[data-testid="filter-chip-active"]');
-  const projectCards = page.locator('[data-testid="project-card"]');
-  const count = await projectCards.count();
-
-  // All visible cards should have ACTIVE status
-  for (let i = 0; i < count; i++) {
-    await expect(projectCards.nth(i).locator('[data-testid="status-badge"]'))
-      .toContainText('ACTIVE');
-  }
-});
-```
+| # | Scenario | Steps | Expected |
+|---|----------|-------|----------|
+| E2E-RESP-01 | Sidebar collapses to hamburger | 1. Open app on mobile viewport | Sidebar hidden; hamburger icon in NavBar |
+| E2E-RESP-02 | Board view — horizontal scroll | 1. Open project board on mobile | Single column visible; other columns reachable by horizontal swipe/scroll |
+| E2E-RESP-03 | Notification dropdown — full screen | 1. Click bell on mobile | Dropdown opens as full-screen overlay |
+| E2E-RESP-04 | Task form — bottom sheet | 1. Click "+ Add Task" on mobile | Form opens as bottom sheet (not center dialog) |
+| E2E-RESP-05 | Touch targets ≥ 44px | 1. Inspect all buttons and icon buttons | All interactive elements ≥ 44×44px |
 
 ---
 
-### TC-E2E-PROJ-003: Add Member to Project
-
-```typescript
-test('TC-E2E-PROJ-003: Manager can add a member to a project', async ({ managerPage: page }) => {
-  // Navigate to project
-  await page.goto(`/projects/${testProjectId}`);
-  await page.click('[data-testid="members-tab"]');
-  await page.click('[data-testid="add-member-button"]');
-
-  await page.fill('[data-testid="member-email-input"]', 'newmember@example.com');
-  await page.selectOption('[data-testid="member-role-select"]', 'MEMBER');
-  await page.click('[data-testid="confirm-add-member-button"]');
-
-  await expect(page.locator('[data-testid="success-toast"]')).toBeVisible();
-  await expect(page.locator('[data-testid="members-list"]')).toContainText('newmember@example.com');
-});
-```
-
----
-
-### TC-E2E-PROJ-004: Archive Project
-
-```typescript
-test('TC-E2E-PROJ-004: Manager can archive a project', async ({ managerPage: page }) => {
-  await page.goto(`/projects/${testProjectId}`);
-  await page.click('[data-testid="project-menu-button"]');
-  await page.click('[data-testid="archive-project-option"]');
-  
-  // Confirm dialog
-  await page.click('[data-testid="confirm-dialog-ok"]');
-  
-  await expect(page.locator('[data-testid="project-status-badge"]')).toContainText('ARCHIVED');
-});
-```
-
----
-
-## 4. Task Scenarios
-
-### TC-E2E-TASK-001: Create Task
-
-```typescript
-test('TC-E2E-TASK-001: Member can create a task in a project', async ({ authenticatedPage: page }) => {
-  await page.goto(`/projects/${testProjectId}`);
-  await page.click('[data-testid="add-task-button"]');
-
-  // Fill task form
-  await page.fill('[data-testid="task-title-input"]', 'Build login page');
-  await page.fill('[data-testid="task-description-input"]', 'Create the login page UI');
-  await page.selectOption('[data-testid="priority-select"]', 'HIGH');
-  await page.fill('[data-testid="due-date-input"]', '2025-12-31');
-
-  // Assign to a member
-  await page.click('[data-testid="assignee-select"]');
-  await page.click('[data-testid="assignee-option-0"]');
-
-  await page.click('[data-testid="submit-task-button"]');
-
-  // Task appears in TODO column
-  await expect(page.locator('[data-testid="column-todo"]'))
-    .toContainText('Build login page');
-});
-```
-
----
-
-### TC-E2E-TASK-002: Update Task Status
-
-```typescript
-test('TC-E2E-TASK-002: User can update task status via status dropdown', async ({ authenticatedPage: page }) => {
-  await page.goto(`/tasks/${testTaskId}`);
-  
-  // Find status dropdown
-  await page.click('[data-testid="task-status-dropdown"]');
-  await page.click('[data-testid="status-option-IN_PROGRESS"]');
-
-  await expect(page.locator('[data-testid="task-status-dropdown"]')).toContainText('IN_PROGRESS');
-  
-  // Verify activity feed updated
-  await expect(page.locator('[data-testid="activity-feed"]'))
-    .toContainText('changed status from TODO to IN_PROGRESS');
-});
-```
-
----
-
-### TC-E2E-TASK-003: Assign Task to Different User
-
-```typescript
-test('TC-E2E-TASK-003: Manager can reassign a task', async ({ managerPage: page }) => {
-  await page.goto(`/tasks/${testTaskId}`);
-  
-  await page.click('[data-testid="assignee-section"]');
-  await page.click('[data-testid="change-assignee-button"]');
-  await page.click('[data-testid="assignee-option-1"]'); // Select second member
-
-  await expect(page.locator('[data-testid="success-toast"]')).toBeVisible();
-  await expect(page.locator('[data-testid="assignee-section"]'))
-    .toContainText('Member Two');
-});
-```
-
----
-
-### TC-E2E-TASK-004: Filter Tasks on Board
-
-```typescript
-test('TC-E2E-TASK-004: User can filter tasks by priority', async ({ authenticatedPage: page }) => {
-  await page.goto(`/projects/${testProjectId}`);
-
-  // Open filter
-  await page.click('[data-testid="filter-button"]');
-  await page.click('[data-testid="priority-filter-HIGH"]');
-
-  // Only HIGH priority tasks visible
-  const taskCards = page.locator('[data-testid="task-card"]');
-  const count = await taskCards.count();
-  for (let i = 0; i < count; i++) {
-    await expect(taskCards.nth(i).locator('[data-testid="priority-chip"]'))
-      .toContainText('HIGH');
-  }
-});
-```
-
----
-
-### TC-E2E-TASK-005: Delete Task
-
-```typescript
-test('TC-E2E-TASK-005: Manager can delete a task', async ({ managerPage: page }) => {
-  await page.goto(`/tasks/${taskToDeleteId}`);
-  await page.click('[data-testid="task-menu-button"]');
-  await page.click('[data-testid="delete-task-option"]');
-  await page.click('[data-testid="confirm-dialog-ok"]');
-
-  await expect(page).toHaveURL(`/projects/${testProjectId}`);
-  await expect(page.locator('[data-testid="task-card"]').filter({
-    hasText: 'Task To Delete'
-  })).not.toBeVisible();
-});
-```
-
----
-
-## 5. Comment & Notification Scenarios
-
-### TC-E2E-CMT-001: Add and Edit Comment
-
-```typescript
-test('TC-E2E-CMT-001: User can add a comment to a task', async ({ authenticatedPage: page }) => {
-  await page.goto(`/tasks/${testTaskId}`);
-  
-  // Add comment
-  await page.fill('[data-testid="comment-input"]', 'This is my comment');
-  await page.click('[data-testid="submit-comment-button"]');
-  
-  await expect(page.locator('[data-testid="comments-list"]'))
-    .toContainText('This is my comment');
-  
-  // Edit own comment
-  await page.hover('[data-testid="comment-item-0"]');
-  await page.click('[data-testid="edit-comment-button-0"]');
-  await page.fill('[data-testid="edit-comment-input"]', 'Updated comment text');
-  await page.click('[data-testid="save-comment-button"]');
-  
-  await expect(page.locator('[data-testid="comment-item-0"]'))
-    .toContainText('Updated comment text');
-  await expect(page.locator('[data-testid="comment-item-0"]'))
-    .toContainText('(edited)');
-});
-```
-
----
-
-### TC-E2E-NOTIF-001: Receive Notification on Task Assignment
-
-```typescript
-test('TC-E2E-NOTIF-001: User receives notification when assigned to task', async ({ browser }) => {
-  // Two user contexts
-  const managerContext = await browser.newContext();
-  const memberContext = await browser.newContext();
-  
-  const managerPage = await managerContext.newPage();
-  const memberPage = await memberContext.newPage();
-
-  // Login as manager and assign task
-  await loginAs(managerPage, 'manager@test.com');
-  await managerPage.goto(`/tasks/${testTaskId}`);
-  await assignTaskToMember(managerPage, 'member@test.com');
-
-  // Login as member and check notification
-  await loginAs(memberPage, 'member@test.com');
-  
-  const notifBell = memberPage.locator('[data-testid="notification-bell"]');
-  await expect(notifBell.locator('[data-testid="unread-badge"]')).toBeVisible();
-  
-  await notifBell.click();
-  await expect(memberPage.locator('[data-testid="notification-dropdown"]'))
-    .toContainText('assigned to');
-
-  await managerContext.close();
-  await memberContext.close();
-});
-```
-
----
-
-### TC-E2E-NOTIF-002: Mark All Notifications as Read
-
-```typescript
-test('TC-E2E-NOTIF-002: User can mark all notifications as read', async ({ authenticatedPage: page }) => {
-  await page.click('[data-testid="notification-bell"]');
-  await page.click('[data-testid="mark-all-read-button"]');
-  
-  await expect(page.locator('[data-testid="unread-badge"]')).not.toBeVisible();
-  await expect(page.locator('[data-testid="notification-item"][data-read="false"]')).toHaveCount(0);
-});
-```
-
----
-
-## 6. Responsive & Accessibility Scenarios
-
-### TC-E2E-RESP-001: Mobile Navigation
-
-```typescript
-test('TC-E2E-RESP-001: Mobile navigation drawer works correctly', async ({ browser }) => {
-  const context = await browser.newContext({
-    viewport: { width: 390, height: 844 }, // iPhone 14
-  });
-  const page = await context.newPage();
-  
-  await loginAs(page, 'member@test.com');
-  
-  // Sidebar should be hidden on mobile
-  await expect(page.locator('[data-testid="sidebar"]')).not.toBeVisible();
-  
-  // Hamburger menu should be visible
-  await page.click('[data-testid="hamburger-menu"]');
-  await expect(page.locator('[data-testid="mobile-drawer"]')).toBeVisible();
-  await page.click('[data-testid="nav-projects"]');
-  
-  await expect(page).toHaveURL('/projects');
-  await context.close();
-});
-```
-
----
-
-### TC-E2E-A11Y-001: Keyboard Navigation on Login
-
-```typescript
-test('TC-E2E-A11Y-001: Login form is fully keyboard navigable', async ({ page }) => {
-  await page.goto('/login');
-  
-  // Tab through form
-  await page.keyboard.press('Tab'); // Focus email
-  await page.keyboard.type('user@example.com');
-  await page.keyboard.press('Tab'); // Focus password
-  await page.keyboard.type('TestPass123!');
-  await page.keyboard.press('Tab'); // Focus login button
-  await page.keyboard.press('Enter'); // Submit
-
-  await page.waitForURL('/dashboard');
-  await expect(page).toHaveURL('/dashboard');
-});
-```
-
----
-
-## 7. Page Object Models
-
-### pages/LoginPage.ts
-
-```typescript
-import { Page, Locator } from '@playwright/test';
-
-export class LoginPage {
-  readonly page: Page;
-  readonly emailInput: Locator;
-  readonly passwordInput: Locator;
-  readonly loginButton: Locator;
-  readonly errorAlert: Locator;
-
-  constructor(page: Page) {
-    this.page = page;
-    this.emailInput = page.locator('[data-testid="email-input"]');
-    this.passwordInput = page.locator('[data-testid="password-input"]');
-    this.loginButton = page.locator('[data-testid="login-button"]');
-    this.errorAlert = page.locator('[data-testid="error-alert"]');
-  }
-
-  async goto() {
-    await this.page.goto('/login');
-  }
-
-  async login(email: string, password: string) {
-    await this.emailInput.fill(email);
-    await this.passwordInput.fill(password);
-    await this.loginButton.click();
-  }
-}
-```
-
-### pages/ProjectPage.ts
-
-```typescript
-import { Page, Locator } from '@playwright/test';
-
-export class ProjectPage {
-  readonly page: Page;
-  readonly projectTitle: Locator;
-  readonly addTaskButton: Locator;
-  readonly todoColumn: Locator;
-
-  constructor(page: Page) {
-    this.page = page;
-    this.projectTitle = page.locator('[data-testid="project-title"]');
-    this.addTaskButton = page.locator('[data-testid="add-task-button"]');
-    this.todoColumn = page.locator('[data-testid="column-todo"]');
-  }
-
-  async goto(projectId: string) {
-    await this.page.goto(`/projects/${projectId}`);
-  }
-
-  async createTask(title: string, priority: string = 'MEDIUM') {
-    await this.addTaskButton.click();
-    await this.page.fill('[data-testid="task-title-input"]', title);
-    await this.page.selectOption('[data-testid="priority-select"]', priority);
-    await this.page.click('[data-testid="submit-task-button"]');
-  }
-}
-```
+## Suite 8: Full User Journey (Phase 6 — CI gate)
+
+*Single comprehensive scenario that covers the core product flow end-to-end.*
+
+| # | Step | Action | Verification |
+|---|------|--------|-------------|
+| 1 | Register | Fill and submit register form | 201; redirect to login |
+| 2 | Login | Enter credentials | Redirect to dashboard |
+| 3 | Create project | Fill project form | Project appears in list |
+| 4 | Create task | Fill task form (title, HIGH priority, due in 2 days, assign to self) | Task in TODO column |
+| 5 | Update status | Change TODO → IN_PROGRESS | Card moves to IN_PROGRESS column |
+| 6 | Add comment | Type comment and submit | Comment appears in task detail |
+| 7 | Verify notification | Check bell icon | unreadCount > 0 (COMMENT_ADDED for reporter) |
+| 8 | Mark notification read | Click notification | Bell badge clears; navigates to task |
+| 9 | Check activity feed | Open Activity tab on project | TASK_CREATED, STATUS_CHANGED, COMMENT_ADDED all present |
+| 10 | Check dashboard | Navigate to /dashboard | My Tasks count reflects the task; project in grid |
+
+> This is the **CI smoke test** — must pass headlessly on every merge to `main` (see `CI6-03`).

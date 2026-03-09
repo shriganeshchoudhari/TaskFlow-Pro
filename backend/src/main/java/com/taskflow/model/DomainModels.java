@@ -8,13 +8,48 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-// ─── Comment ─────────────────────────────────────────────────────────────────
+// ─── RefreshToken ─────────────────────────────────────────────────────────────
 @Entity
-@Table(name = "comments", indexes = {
-    @Index(name = "idx_comments_task_id", columnList = "task_id")
+@Table(name = "refresh_tokens", indexes = {
+    @Index(name = "idx_refresh_tokens_token",   columnList = "token",   unique = true),
+    @Index(name = "idx_refresh_tokens_user_id", columnList = "user_id")
 })
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
-class Comment {
+public class RefreshToken {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    @Column(nullable = false, unique = true, length = 512)
+    private String token;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+    @Column(name = "expires_at", nullable = false,
+            columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private OffsetDateTime expiresAt;
+
+    @Column(name = "is_revoked", nullable = false)
+    @Builder.Default
+    private boolean isRevoked = false;
+
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false,
+            columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private OffsetDateTime createdAt;
+}
+
+// ─── Comment ──────────────────────────────────────────────────────────────────
+@Entity
+@Table(name = "comments", indexes = {
+    @Index(name = "idx_comments_task_id",    columnList = "task_id"),
+    @Index(name = "idx_comments_created_at", columnList = "created_at")
+})
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+public class Comment {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -49,14 +84,16 @@ class Comment {
 // ─── ProjectMember ────────────────────────────────────────────────────────────
 @Entity
 @Table(name = "project_members",
-    uniqueConstraints = @UniqueConstraint(columnNames = {"project_id", "user_id"}),
+    uniqueConstraints = @UniqueConstraint(
+        name = "uk_project_members_project_user",
+        columnNames = {"project_id", "user_id"}),
     indexes = {
         @Index(name = "idx_pm_project_id", columnList = "project_id"),
-        @Index(name = "idx_pm_user_id", columnList = "user_id")
+        @Index(name = "idx_pm_user_id",    columnList = "user_id")
     }
 )
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
-class ProjectMember {
+public class ProjectMember {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -84,11 +121,11 @@ class ProjectMember {
 // ─── Notification ─────────────────────────────────────────────────────────────
 @Entity
 @Table(name = "notifications", indexes = {
-    @Index(name = "idx_notif_user_id", columnList = "user_id"),
+    @Index(name = "idx_notif_user_id",    columnList = "user_id"),
     @Index(name = "idx_notif_user_unread", columnList = "user_id,is_read")
 })
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
-class Notification {
+public class Notification {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -130,11 +167,11 @@ class Notification {
 @Entity
 @Table(name = "activities", indexes = {
     @Index(name = "idx_activities_project_id", columnList = "project_id"),
-    @Index(name = "idx_activities_task_id", columnList = "task_id"),
+    @Index(name = "idx_activities_task_id",    columnList = "task_id"),
     @Index(name = "idx_activities_created_at", columnList = "created_at")
 })
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
-class Activity {
+public class Activity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -166,6 +203,9 @@ class Activity {
 
     @Column(name = "new_value", columnDefinition = "TEXT")
     private String newValue;
+
+    @Column(name = "metadata", columnDefinition = "TEXT")
+    private String metadata;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false,

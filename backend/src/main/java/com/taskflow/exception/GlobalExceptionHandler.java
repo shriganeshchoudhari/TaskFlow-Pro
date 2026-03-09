@@ -27,6 +27,25 @@ public class GlobalExceptionHandler {
         return buildError(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", ex.getMessage(), request);
     }
 
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<Map<String, Object>> handleForbidden(
+            ForbiddenException ex, HttpServletRequest request) {
+        return buildError(HttpStatus.FORBIDDEN, "FORBIDDEN", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<Map<String, Object>> handleConflict(
+            ConflictException ex, HttpServletRequest request) {
+        return buildError(HttpStatus.CONFLICT, "CONFLICT", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(InvalidStatusTransitionException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidTransition(
+            InvalidStatusTransitionException ex, HttpServletRequest request) {
+        return buildError(HttpStatus.UNPROCESSABLE_ENTITY,
+            "INVALID_STATUS_TRANSITION", ex.getMessage(), request);
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<Map<String, Object>> handleAccessDenied(
             AccessDeniedException ex, HttpServletRequest request) {
@@ -40,8 +59,9 @@ public class GlobalExceptionHandler {
 
         List<Map<String, String>> details = ex.getBindingResult().getFieldErrors()
             .stream()
-            .map(fe -> Map.of("field", fe.getField(),
-                              "message", Objects.requireNonNullElse(fe.getDefaultMessage(), "")))
+            .map(fe -> Map.of(
+                "field",   fe.getField(),
+                "message", Objects.requireNonNullElse(fe.getDefaultMessage(), "")))
             .toList();
 
         Map<String, Object> body = new LinkedHashMap<>();

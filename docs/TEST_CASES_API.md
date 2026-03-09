@@ -1,622 +1,172 @@
-# TaskFlow Pro — API Test Cases
+# TaskFlow Pro — Test Cases: API
 
+**Version:** 1.0.0  
 **Tool:** Postman + Newman  
-**Collection:** `tests/api/postman/TaskflowPro.postman_collection.json`  
-**Format:** Postman v2.1 Collection
+**Collection:** `tests/api/postman/TaskflowPro.postman_collection.json`
+
+> All test cases map to implementation tasks from `docs/IMPLEMENTATION_STATUS.md`.  
+> Run order must follow dependency chain: Auth → Users → Projects → Tasks → Comments → Notifications → Activities.
 
 ---
 
-## Table of Contents
-1. [Auth Tests](#1-auth-tests)
-2. [Project Tests](#2-project-tests)
-3. [Task Tests](#3-task-tests)
-4. [Comment Tests](#4-comment-tests)
-5. [Notification Tests](#5-notification-tests)
-6. [Error Case Tests](#6-error-case-tests)
-7. [REST Client Requests](#7-rest-client-requests)
+## Setup
 
----
+```bash
+# Run full API test suite
+newman run tests/api/postman/TaskflowPro.postman_collection.json \
+  -e tests/api/postman/environments/local.json \
+  --reporters cli,html \
+  --reporter-html-export tests/api/postman/report.html
 
-## 1. Auth Tests
-
-### TC-AUTH-001: Register New User
-
-```
-Method: POST
-URL: {{baseUrl}}/api/v1/auth/register
-Headers: Content-Type: application/json
-Body:
-{
-  "fullName": "Test User",
-  "email": "testuser_{{$randomInt}}@example.com",
-  "password": "TestPass123!"
-}
-
-Tests:
-  ✓ Status code is 201
-  ✓ Response has id (UUID format)
-  ✓ Response has email matching request
-  ✓ Response does NOT contain password field
-  ✓ Response has role = "MEMBER"
-  ✓ Response has createdAt (ISO 8601)
-```
-
-### TC-AUTH-002: Register — Duplicate Email
-
-```
-Method: POST
-URL: {{baseUrl}}/api/v1/auth/register
-Body: { email: "existing@example.com", ... }
-
-Tests:
-  ✓ Status code is 409
-  ✓ Error message contains "already registered"
-  ✓ Error status field = "CONFLICT"
-```
-
-### TC-AUTH-003: Register — Invalid Password
-
-```
-Method: POST
-URL: {{baseUrl}}/api/v1/auth/register
-Body: { password: "weak" }
-
-Tests:
-  ✓ Status code is 400
-  ✓ Response details array contains password field error
-  ✓ Error status field = "BAD_REQUEST"
-```
-
-### TC-AUTH-004: Login Success
-
-```
-Method: POST
-URL: {{baseUrl}}/api/v1/auth/login
-Body: { "email": "{{testEmail}}", "password": "{{testPassword}}" }
-
-Pre-request Script:
-  pm.collectionVariables.set("testEmail", "jane@example.com");
-  pm.collectionVariables.set("testPassword", "TestPass123!");
-
-Tests:
-  ✓ Status code is 200
-  ✓ Response has accessToken (non-empty string)
-  ✓ Response has refreshToken (non-empty string)
-  ✓ Response tokenType = "Bearer"
-  ✓ Response expiresIn = 900
-  ✓ Response user.email matches request email
-  ✓ accessToken stored: pm.collectionVariables.set("accessToken", ...)
-  ✓ refreshToken stored: pm.collectionVariables.set("refreshToken", ...)
-```
-
-### TC-AUTH-005: Login — Wrong Password
-
-```
-Method: POST
-URL: {{baseUrl}}/api/v1/auth/login
-Body: { "email": "jane@example.com", "password": "wrongpassword" }
-
-Tests:
-  ✓ Status code is 401
-  ✓ Error message = "Invalid email or password"
-  ✓ Response does NOT contain accessToken
-```
-
-### TC-AUTH-006: Login — Non-existent Email
-
-```
-Tests:
-  ✓ Status code is 401
-  ✓ Error message does NOT reveal whether email exists (same message)
-```
-
-### TC-AUTH-007: Refresh Token
-
-```
-Method: POST
-URL: {{baseUrl}}/api/v1/auth/refresh
-Body: { "refreshToken": "{{refreshToken}}" }
-
-Tests:
-  ✓ Status code is 200
-  ✓ New accessToken returned (different from old)
-  ✓ New refreshToken returned (rotation)
-  ✓ Update stored tokens in collection variables
-```
-
-### TC-AUTH-008: Refresh — Expired Token
-
-```
-Tests:
-  ✓ Status code is 401
-  ✓ Error code = "REFRESH_TOKEN_EXPIRED"
-```
-
-### TC-AUTH-009: Access Protected Route — No Token
-
-```
-Method: GET
-URL: {{baseUrl}}/api/v1/projects
-(No Authorization header)
-
-Tests:
-  ✓ Status code is 401
-  ✓ Response message indicates missing authentication
-```
-
-### TC-AUTH-010: Logout
-
-```
-Method: POST
-URL: {{baseUrl}}/api/v1/auth/logout
-Headers: Authorization: Bearer {{accessToken}}
-Body: { "refreshToken": "{{refreshToken}}" }
-
-Tests:
-  ✓ Status code is 204
-  ✓ Subsequent refresh with same token returns 401
+# Environment variables (local.json)
+baseUrl: http://localhost:8080/api/v1
+accessToken: (set by Auth/Login test)
+refreshToken: (set by Auth/Login test)
+projectId: (set by Projects/Create test)
+taskId: (set by Tasks/Create test)
+commentId: (set by Comments/Create test)
 ```
 
 ---
 
-## 2. Project Tests
+## Auth Endpoint Tests (Phase 1)
 
-### TC-PROJ-001: Create Project
-
-```
-Method: POST
-URL: {{baseUrl}}/api/v1/projects
-Headers: Authorization: Bearer {{accessToken}}
-Body:
-{
-  "name": "Test Project {{$randomInt}}",
-  "description": "Created by API test",
-  "visibility": "PRIVATE"
-}
-
-Tests:
-  ✓ Status code is 201
-  ✓ Response has id (UUID)
-  ✓ Response name matches request
-  ✓ Response status = "ACTIVE"
-  ✓ Response owner.email = authenticated user's email
-  ✓ Store: pm.collectionVariables.set("projectId", data.id)
-```
-
-### TC-PROJ-002: Get All Projects
-
-```
-Method: GET
-URL: {{baseUrl}}/api/v1/projects?page=0&size=10
-
-Tests:
-  ✓ Status code is 200
-  ✓ Response has content array
-  ✓ Response has totalElements (integer)
-  ✓ Response has page = 0
-  ✓ All items have id, name, status, owner
-```
-
-### TC-PROJ-003: Get Project by ID
-
-```
-Method: GET
-URL: {{baseUrl}}/api/v1/projects/{{projectId}}
-
-Tests:
-  ✓ Status code is 200
-  ✓ Response id = {{projectId}}
-  ✓ Response has memberCount >= 1
-```
-
-### TC-PROJ-004: Update Project
-
-```
-Method: PUT
-URL: {{baseUrl}}/api/v1/projects/{{projectId}}
-Body: { "name": "Updated Name", "status": "ON_HOLD" }
-
-Tests:
-  ✓ Status code is 200
-  ✓ Response name = "Updated Name"
-  ✓ Response status = "ON_HOLD"
-  ✓ Response updatedAt > Response createdAt
-```
-
-### TC-PROJ-005: Add Member to Project
-
-```
-Method: POST
-URL: {{baseUrl}}/api/v1/projects/{{projectId}}/members
-Body: { "email": "member@example.com", "role": "MEMBER" }
-
-Tests:
-  ✓ Status code is 201
-  ✓ Response user.email = "member@example.com"
-  ✓ Response role = "MEMBER"
-```
-
-### TC-PROJ-006: Get Project Members
-
-```
-Method: GET
-URL: {{baseUrl}}/api/v1/projects/{{projectId}}/members
-
-Tests:
-  ✓ Status code is 200
-  ✓ Response is an array
-  ✓ Array has at least 2 members (owner + added member)
-  ✓ Each member has user.id, user.email, role, joinedAt
-```
-
-### TC-PROJ-007: Unauthorized — MEMBER Cannot Create Project
-
-```
-Setup: Login as MEMBER role user, get member access token
-Method: POST URL: {{baseUrl}}/api/v1/projects
-
-Tests:
-  ✓ Status code is 403
-  ✓ Error = "FORBIDDEN"
-```
-
-### TC-PROJ-008: Delete (Archive) Project
-
-```
-Method: DELETE
-URL: {{baseUrl}}/api/v1/projects/{{projectId}}
-
-Tests:
-  ✓ Status code is 204
-  ✓ GET {{projectId}} returns status = "ARCHIVED" (or 404)
-```
+| # | Test | Method + Path | Input | Expected | Task |
+|---|------|--------------|-------|----------|------|
+| A-01 | Register new user | POST /auth/register | valid fullName, email, password | 201 + user object (no password field) | B1-10 |
+| A-02 | Register — duplicate email | POST /auth/register | same email again | 409 EMAIL_ALREADY_EXISTS | B1-11 |
+| A-03 | Register — invalid email | POST /auth/register | "not-an-email" | 400 validation error on email field | B1-11 |
+| A-04 | Register — weak password | POST /auth/register | "password" | 400 validation error on password field | B1-11 |
+| A-05 | Login — valid credentials | POST /auth/login | correct email + password | 200 + accessToken + refreshToken + user | B1-10 |
+| A-06 | Login — wrong password | POST /auth/login | correct email, wrong password | 401 UNAUTHORIZED | B1-11 |
+| A-07 | Login — unknown email | POST /auth/login | unknown@email.com | 401 UNAUTHORIZED | B1-11 |
+| A-08 | Login — rate limit | POST /auth/login | 11 requests in 15 min | 429 TOO_MANY_REQUESTS with retryAfter | B5-04 |
+| A-09 | Refresh — valid token | POST /auth/refresh | valid refreshToken | 200 + new accessToken + new refreshToken | B1-10 |
+| A-10 | Refresh — invalid token | POST /auth/refresh | "garbage-token" | 401 TOKEN_INVALID | B1-11 |
+| A-11 | Refresh — reuse after rotation | POST /auth/refresh | old (rotated) refreshToken | 401 TOKEN_INVALID | B1-06 |
+| A-12 | Logout | POST /auth/logout | valid refreshToken | 204 No Content | B1-10 |
+| A-13 | Refresh — after logout | POST /auth/refresh | revoked refreshToken | 401 REFRESH_TOKEN_EXPIRED | B1-10 |
 
 ---
 
-## 3. Task Tests
+## User Endpoint Tests (Phase 3 + 5)
 
-### TC-TASK-001: Create Task
-
-```
-Method: POST
-URL: {{baseUrl}}/api/v1/projects/{{projectId}}/tasks
-Body:
-{
-  "title": "Implement feature X",
-  "description": "Detailed description",
-  "priority": "HIGH",
-  "status": "TODO",
-  "dueDate": "2025-12-31",
-  "assigneeId": "{{memberId}}"
-}
-
-Tests:
-  ✓ Status code is 201
-  ✓ Response id is UUID
-  ✓ Response title matches
-  ✓ Response status = "TODO"
-  ✓ Response priority = "HIGH"
-  ✓ Response assignee.id = {{memberId}}
-  ✓ Store: pm.collectionVariables.set("taskId", data.id)
-```
-
-### TC-TASK-002: Get Tasks in Project
-
-```
-Method: GET
-URL: {{baseUrl}}/api/v1/projects/{{projectId}}/tasks
-
-Tests:
-  ✓ Status code is 200
-  ✓ content array contains created task
-  ✓ totalElements >= 1
-```
-
-### TC-TASK-003: Get Tasks — Filter by Status
-
-```
-Method: GET
-URL: {{baseUrl}}/api/v1/projects/{{projectId}}/tasks?status=TODO
-
-Tests:
-  ✓ Status code is 200
-  ✓ All items in content have status = "TODO"
-```
-
-### TC-TASK-004: Get Task by ID
-
-```
-Method: GET
-URL: {{baseUrl}}/api/v1/tasks/{{taskId}}
-
-Tests:
-  ✓ Status code is 200
-  ✓ Response id = {{taskId}}
-  ✓ Response has projectId
-  ✓ Response has reporter
-```
-
-### TC-TASK-005: Update Task Status
-
-```
-Method: PATCH
-URL: {{baseUrl}}/api/v1/tasks/{{taskId}}/status
-Body: { "status": "IN_PROGRESS" }
-
-Tests:
-  ✓ Status code is 200
-  ✓ Response status = "IN_PROGRESS"
-  ✓ Response updatedAt updated
-```
-
-### TC-TASK-006: Update Task Details
-
-```
-Method: PUT
-URL: {{baseUrl}}/api/v1/tasks/{{taskId}}
-Body: { "title": "Updated title", "priority": "CRITICAL" }
-
-Tests:
-  ✓ Status code is 200
-  ✓ Response title = "Updated title"
-  ✓ Response priority = "CRITICAL"
-```
-
-### TC-TASK-007: Update Task — Invalid Status Transition
-
-```
-Setup: Task in "DONE" status
-Method: PATCH body: { "status": "IN_PROGRESS" } (not allowed in v1)
-
-Tests:
-  ✓ Status code is 422
-  ✓ Error contains "status transition"
-```
-
-### TC-TASK-008: Delete Task
-
-```
-Method: DELETE
-URL: {{baseUrl}}/api/v1/tasks/{{taskId}}
-
-Tests:
-  ✓ Status code is 204
-  ✓ GET {{taskId}} returns 404
-```
+| # | Test | Method + Path | Input | Expected | Task |
+|---|------|--------------|-------|----------|------|
+| U-01 | Get current user | GET /users/me | Bearer token | 200 + user object | B3-11 |
+| U-02 | Get current user — no auth | GET /users/me | no token | 401 UNAUTHORIZED | B1-08 |
+| U-03 | Update profile | PUT /users/me | { fullName, avatarUrl } | 200 + updated user | B5-03 |
+| U-04 | Update profile — invalid name | PUT /users/me | { fullName: "" } | 400 validation error | B5-03 |
+| U-05 | Change password — valid | PUT /users/me/password | correct currentPassword + new | 204 No Content | B5-03 |
+| U-06 | Change password — wrong current | PUT /users/me/password | wrong currentPassword | 401 UNAUTHORIZED | B5-03 |
 
 ---
 
-## 4. Comment Tests
+## Project Endpoint Tests (Phase 2)
 
-### TC-CMT-001: Add Comment to Task
-
-```
-Method: POST
-URL: {{baseUrl}}/api/v1/tasks/{{taskId}}/comments
-Body: { "content": "This is a test comment" }
-
-Tests:
-  ✓ Status code is 201
-  ✓ Response content = "This is a test comment"
-  ✓ Response author.email = authenticated user's email
-  ✓ Store: pm.collectionVariables.set("commentId", data.id)
-```
-
-### TC-CMT-002: Get Comments
-
-```
-Method: GET
-URL: {{baseUrl}}/api/v1/tasks/{{taskId}}/comments
-
-Tests:
-  ✓ Status code is 200
-  ✓ Response is an array
-  ✓ Array contains comment with matching id
-  ✓ Comments ordered by createdAt ASC
-```
-
-### TC-CMT-003: Edit Own Comment
-
-```
-Method: PUT
-URL: {{baseUrl}}/api/v1/comments/{{commentId}}
-Body: { "content": "Updated comment content" }
-
-Tests:
-  ✓ Status code is 200
-  ✓ Response content = "Updated comment content"
-  ✓ Response isEdited = true
-```
-
-### TC-CMT-004: Delete Another User's Comment (Forbidden)
-
-```
-Setup: Login as different user
-Method: DELETE
-URL: {{baseUrl}}/api/v1/comments/{{commentId}}
-
-Tests:
-  ✓ Status code is 403
-```
+| # | Test | Method + Path | Input | Expected | Task |
+|---|------|--------------|-------|----------|------|
+| P-01 | Create project | POST /projects | valid name + description | 201 + project with id | B2-08 |
+| P-02 | Create project — no auth | POST /projects | no token | 401 UNAUTHORIZED | B1-08 |
+| P-03 | Create project — missing name | POST /projects | { description: "test" } | 400 validation error | B2-10 |
+| P-04 | List projects | GET /projects | Bearer token | 200 + paginated list | B2-08 |
+| P-05 | List projects — filter by status | GET /projects?status=ACTIVE | Bearer token | 200 + only ACTIVE projects | B2-05 |
+| P-06 | List projects — pagination | GET /projects?page=0&size=2 | Bearer token | 200 + max 2 items | B2-05 |
+| P-07 | Get project by ID | GET /projects/{id} | Bearer token (member) | 200 + project object | B2-08 |
+| P-08 | Get project — non-member private | GET /projects/{id} | non-member token | 403 NOT_PROJECT_MEMBER | B2-05 |
+| P-09 | Get project — not found | GET /projects/unknown-uuid | Bearer token | 404 RESOURCE_NOT_FOUND | B1-11 |
+| P-10 | Update project | PUT /projects/{id} | new name + status | 200 + updated project | B2-08 |
+| P-11 | Update project — non-manager | PUT /projects/{id} | MEMBER role token | 403 ACCESS_DENIED | B2-06 |
+| P-12 | Archive project | DELETE /projects/{id} | MANAGER token | 204 No Content | B2-08 |
+| P-13 | Archived project hidden | GET /projects?status=ACTIVE | Bearer token | 200 + archived not in list | B2-06 |
+| P-14 | Add member | POST /projects/{id}/members | { email, role: "MEMBER" } | 201 + member object | B2-09 |
+| P-15 | Add member — already member | POST /projects/{id}/members | existing member email | 409 CONFLICT | B2-07 |
+| P-16 | Add member — non-manager | POST /projects/{id}/members | MEMBER role token | 403 ACCESS_DENIED | B2-09 |
+| P-17 | Get members | GET /projects/{id}/members | Bearer token (member) | 200 + member list with roles | B2-09 |
+| P-18 | Remove member | DELETE /projects/{id}/members/{userId} | MANAGER token | 204 No Content | B2-09 |
 
 ---
 
-## 5. Notification Tests
+## Task Endpoint Tests (Phase 3)
 
-### TC-NOTIF-001: Get Notifications
-
-```
-Method: GET
-URL: {{baseUrl}}/api/v1/notifications
-
-Tests:
-  ✓ Status code is 200
-  ✓ Response has content array
-  ✓ Response has unreadCount (integer)
-  ✓ Each notification has id, type, message, isRead, createdAt
-```
-
-### TC-NOTIF-002: Mark Notification as Read
-
-```
-Setup: Get first unread notification id
-Method: PATCH
-URL: {{baseUrl}}/api/v1/notifications/{{notificationId}}/read
-
-Tests:
-  ✓ Status code is 200
-  ✓ Response isRead = true
-```
-
-### TC-NOTIF-003: Mark All Notifications Read
-
-```
-Method: PATCH
-URL: {{baseUrl}}/api/v1/notifications/read-all
-
-Tests:
-  ✓ Status code is 204
-  ✓ GET /notifications returns unreadCount = 0
-```
+| # | Test | Method + Path | Input | Expected | Task |
+|---|------|--------------|-------|----------|------|
+| T-01 | Create task | POST /projects/{id}/tasks | title + priority + assigneeId | 201 + task object | B3-09 |
+| T-02 | Create task — non-member | POST /projects/{id}/tasks | non-member token | 403 NOT_PROJECT_MEMBER | B3-04 |
+| T-03 | Create task — missing title | POST /projects/{id}/tasks | { priority: "HIGH" } | 400 validation error | B3-10 |
+| T-04 | List tasks | GET /projects/{id}/tasks | Bearer token | 200 + paginated tasks | B3-09 |
+| T-05 | Filter tasks by status | GET /projects/{id}/tasks?status=TODO | Bearer token | 200 + only TODO tasks | B3-05 |
+| T-06 | Filter tasks by assignee | GET /projects/{id}/tasks?assigneeId={id} | Bearer token | 200 + assigned tasks | B3-05 |
+| T-07 | Get task by ID | GET /tasks/{id} | Bearer token (member) | 200 + full task object | B3-09 |
+| T-08 | Update task | PUT /tasks/{id} | new title + description | 200 + updated task | B3-09 |
+| T-09 | Update task — unauthorized | PUT /tasks/{id} | unrelated member token | 403 ACCESS_DENIED | B3-06 |
+| T-10 | Status update — valid transition | PATCH /tasks/{id}/status | { status: "IN_PROGRESS" } | 200 + updated task | B3-09 |
+| T-11 | Status update — invalid transition | PATCH /tasks/{id}/status | TODO → DONE (skip) | 422 INVALID_STATUS_TRANSITION | B3-07 |
+| T-12 | Delete task — MANAGER | DELETE /tasks/{id} | MANAGER token | 204 No Content | B3-09 |
+| T-13 | Delete task — MEMBER | DELETE /tasks/{id} | MEMBER token | 403 ACCESS_DENIED | B3-08 |
+| T-14 | Get my tasks | GET /tasks/my-tasks | Bearer token | 200 + only assignee=me tasks | B5-02 |
 
 ---
 
-## 6. Error Case Tests
+## Comment Endpoint Tests (Phase 4)
 
-### TC-ERR-001: Invalid UUID in Path
-
-```
-Method: GET
-URL: {{baseUrl}}/api/v1/projects/not-a-uuid
-
-Tests:
-  ✓ Status code is 400
-  ✓ Error message mentions invalid ID format
-```
-
-### TC-ERR-002: Resource Not Found
-
-```
-Method: GET
-URL: {{baseUrl}}/api/v1/projects/00000000-0000-0000-0000-000000000000
-
-Tests:
-  ✓ Status code is 404
-  ✓ Error = "NOT_FOUND"
-```
-
-### TC-ERR-003: Expired JWT Token
-
-```
-Method: GET (with expired token in Authorization)
-URL: {{baseUrl}}/api/v1/projects
-
-Tests:
-  ✓ Status code is 401
-  ✓ Error code = "TOKEN_EXPIRED"
-```
-
-### TC-ERR-004: Access Non-Member Project
-
-```
-Setup: Create project as User A, login as User B (non-member)
-Method: GET
-URL: {{baseUrl}}/api/v1/projects/{{userAProjectId}}
-
-Tests:
-  ✓ Status code is 403 or 404 (consistent)
-```
+| # | Test | Method + Path | Input | Expected | Task |
+|---|------|--------------|-------|----------|------|
+| C-01 | Add comment | POST /tasks/{id}/comments | { content: "..." } | 201 + comment with author | B4-04 |
+| C-02 | Add comment — non-member | POST /tasks/{id}/comments | non-member token | 403 NOT_PROJECT_MEMBER | B4-03 |
+| C-03 | Add comment — empty content | POST /tasks/{id}/comments | { content: "" } | 400 validation error | B4-05 |
+| C-04 | Get comments | GET /tasks/{id}/comments | Bearer token | 200 + chronological list | B4-04 |
+| C-05 | Edit own comment | PUT /comments/{id} | { content: "updated" } | 200 + updated comment (is_edited=true) | B4-04 |
+| C-06 | Edit another's comment | PUT /comments/{id} | different user token | 403 ACCESS_DENIED | B4-03 |
+| C-07 | Delete own comment | DELETE /comments/{id} | comment author token | 204 No Content | B4-04 |
+| C-08 | Delete comment — MANAGER | DELETE /comments/{id} | project MANAGER token | 204 No Content | B4-03 |
 
 ---
 
-## 7. REST Client Requests
+## Notification Endpoint Tests (Phase 4)
 
-File: `tests/api/rest-client/taskflow.http`
+| # | Test | Method + Path | Input | Expected | Task |
+|---|------|--------------|-------|----------|------|
+| N-01 | Get notifications | GET /notifications | Bearer token | 200 + paginated + unreadCount | B4-10 |
+| N-02 | Filter unread only | GET /notifications?isRead=false | Bearer token | 200 + only unread notifications | B4-10 |
+| N-03 | Task assign creates notification | POST /projects/{id}/tasks (with assigneeId) | MANAGER token | Assignee receives TASK_ASSIGNED notification | B4-08 |
+| N-04 | Comment creates notification | POST /tasks/{id}/comments | member token | Assignee + reporter get COMMENT_ADDED | B4-08 |
+| N-05 | Mark single as read | PATCH /notifications/{id}/read | Bearer token | 200 + notification.isRead = true | B4-10 |
+| N-06 | Mark all as read | PATCH /notifications/read-all | Bearer token | 204 + all notifications.isRead = true | B4-10 |
+| N-07 | unreadCount decreases after read | GET /notifications (after N-05) | Bearer token | 200 + unreadCount decremented | B4-10 |
 
-```http
-### Variables
-@baseUrl = http://localhost:8080/api/v1
-@contentType = application/json
+---
 
-### 1. Register User
-POST {{baseUrl}}/auth/register
-Content-Type: {{contentType}}
+## Activity Endpoint Tests (Phase 4)
 
-{
-  "fullName": "Test User",
-  "email": "test@example.com",
-  "password": "TestPass123!"
-}
+| # | Test | Method + Path | Input | Expected | Task |
+|---|------|--------------|-------|----------|------|
+| AC-01 | Get project activities | GET /projects/{id}/activities | Bearer token (member) | 200 + paginated activity feed | B4-15 |
+| AC-02 | Get task activities | GET /tasks/{id}/activities | Bearer token (member) | 200 + task-specific events | B4-15 |
+| AC-03 | Task creation logged | Create task then GET /tasks/{id}/activities | — | TASK_CREATED entry present | B4-14 |
+| AC-04 | Status change logged | PATCH status then GET activities | — | TASK_STATUS_CHANGED with old+new value | B4-14 |
+| AC-05 | Comment logged | POST comment then GET activities | — | COMMENT_ADDED entry present | B4-14 |
 
-### 2. Login
-# @name login
-POST {{baseUrl}}/auth/login
-Content-Type: {{contentType}}
+---
 
-{
-  "email": "test@example.com",
-  "password": "TestPass123!"
-}
+## Dashboard Endpoint Tests (Phase 5)
 
-### 3. Extract token from login response
-@accessToken = {{login.response.body.accessToken}}
+| # | Test | Method + Path | Input | Expected | Task |
+|---|------|--------------|-------|----------|------|
+| D-01 | Get dashboard summary | GET /dashboard/summary | Bearer token | 200 + { myTaskCounts, dueThisWeek, activeProjects, unreadNotifCount } | B5-01 |
+| D-02 | Dashboard — no auth | GET /dashboard/summary | no token | 401 UNAUTHORIZED | B1-08 |
 
-### 4. Get Projects
-GET {{baseUrl}}/projects
-Authorization: Bearer {{accessToken}}
-Accept: {{contentType}}
+---
 
-### 5. Create Project
-POST {{baseUrl}}/projects
-Authorization: Bearer {{accessToken}}
-Content-Type: {{contentType}}
+## Error Case Tests (Cross-phase)
 
-{
-  "name": "My First Project",
-  "description": "Test project via REST client",
-  "visibility": "PRIVATE"
-}
-
-### 6. Create Task
-# Replace {projectId} with actual UUID
-POST {{baseUrl}}/projects/{projectId}/tasks
-Authorization: Bearer {{accessToken}}
-Content-Type: {{contentType}}
-
-{
-  "title": "First Task",
-  "description": "Task created via REST client",
-  "priority": "MEDIUM",
-  "status": "TODO"
-}
-
-### 7. Update Task Status
-PATCH {{baseUrl}}/tasks/{taskId}/status
-Authorization: Bearer {{accessToken}}
-Content-Type: {{contentType}}
-
-{
-  "status": "IN_PROGRESS"
-}
-
-### 8. Add Comment
-POST {{baseUrl}}/tasks/{taskId}/comments
-Authorization: Bearer {{accessToken}}
-Content-Type: {{contentType}}
-
-{
-  "content": "Working on this now!"
-}
-
-### 9. Get Notifications
-GET {{baseUrl}}/notifications?isRead=false&page=0&size=20
-Authorization: Bearer {{accessToken}}
-
-### 10. Refresh Token
-POST {{baseUrl}}/auth/refresh
-Content-Type: {{contentType}}
-
-{
-  "refreshToken": "{{refreshToken}}"
-}
-```
+| # | Test | Scenario | Expected |
+|---|------|----------|----------|
+| E-01 | Malformed JSON | Any POST with invalid JSON body | 400 BAD_REQUEST |
+| E-02 | Wrong Content-Type | POST without Content-Type: application/json | 415 UNSUPPORTED_MEDIA_TYPE |
+| E-03 | Expired access token | Request with expired JWT | 401 TOKEN_EXPIRED |
+| E-04 | Malformed JWT | Request with garbled token | 401 TOKEN_INVALID |
+| E-05 | Non-existent resource | GET /tasks/00000000-0000-0000-0000-000000000000 | 404 RESOURCE_NOT_FOUND |
+| E-06 | UUID format violation | GET /tasks/not-a-uuid | 400 BAD_REQUEST |
+| E-07 | Forbidden role | MEMBER attempts MANAGER action | 403 ACCESS_DENIED |
+| E-08 | traceId in error | Any 4xx/5xx response | error body includes traceId field |

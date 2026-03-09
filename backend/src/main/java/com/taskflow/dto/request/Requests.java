@@ -3,6 +3,10 @@ package com.taskflow.dto.request;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
+import java.time.LocalDate;
+import java.util.List;
+import java.util.UUID;
+
 // ─── LoginRequest ─────────────────────────────────────────────────────────────
 @Data
 public class LoginRequest {
@@ -53,6 +57,40 @@ public class CreateProjectRequest {
     private String status = "ACTIVE";
 }
 
+// ─── UpdateProjectRequest ─────────────────────────────────────────────────────
+@Data
+public class UpdateProjectRequest {
+    @Size(min = 1, max = 255)
+    private String name;
+
+    @Size(max = 5000)
+    private String description;
+
+    @Pattern(regexp = "ACTIVE|ON_HOLD|COMPLETED|ARCHIVED")
+    private String status;
+
+    @Pattern(regexp = "PUBLIC|PRIVATE")
+    private String visibility;
+}
+
+// ─── AddProjectMemberRequest ──────────────────────────────────────────────────
+@Data
+public class AddProjectMemberRequest {
+    @NotBlank @Email
+    private String email;
+
+    @Pattern(regexp = "MANAGER|MEMBER|VIEWER")
+    private String role = "MEMBER";
+}
+
+// ─── UpdateMemberRoleRequest ──────────────────────────────────────────────────
+@Data
+public class UpdateMemberRoleRequest {
+    @NotBlank
+    @Pattern(regexp = "MANAGER|MEMBER|VIEWER")
+    private String role;
+}
+
 // ─── CreateTaskRequest ────────────────────────────────────────────────────────
 @Data
 public class CreateTaskRequest {
@@ -68,11 +106,26 @@ public class CreateTaskRequest {
     @Pattern(regexp = "LOW|MEDIUM|HIGH|CRITICAL")
     private String priority;
 
-    private java.time.LocalDate dueDate;
+    private LocalDate dueDate;
+    private UUID assigneeId;
+    private List<String> tags;
+}
 
-    private java.util.UUID assigneeId;
+// ─── UpdateTaskRequest ────────────────────────────────────────────────────────
+@Data
+public class UpdateTaskRequest {
+    @Size(min = 1, max = 500)
+    private String title;
 
-    private java.util.List<String> tags;
+    @Size(max = 10000)
+    private String description;
+
+    @Pattern(regexp = "LOW|MEDIUM|HIGH|CRITICAL")
+    private String priority;
+
+    private LocalDate dueDate;
+    private UUID assigneeId;
+    private List<String> tags;
 }
 
 // ─── UpdateTaskStatusRequest ──────────────────────────────────────────────────
@@ -91,12 +144,29 @@ public class CreateCommentRequest {
     private String content;
 }
 
-// ─── AddProjectMemberRequest ──────────────────────────────────────────────────
+// ─── UpdateProfileRequest ─────────────────────────────────────────────────────
 @Data
-public class AddProjectMemberRequest {
-    @NotBlank @Email
-    private String email;
+public class UpdateProfileRequest {
+    @Size(min = 2, max = 100)
+    private String fullName;
 
-    @Pattern(regexp = "MANAGER|MEMBER|VIEWER")
-    private String role = "MEMBER";
+    @Size(max = 500)
+    private String avatarUrl;
+}
+
+// ─── UpdatePasswordRequest ────────────────────────────────────────────────────
+@Data
+public class UpdatePasswordRequest {
+    @NotBlank
+    private String currentPassword;
+
+    @NotBlank
+    @Pattern(
+        regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$",
+        message = "Password must be at least 8 characters with uppercase, lowercase, digit and special character"
+    )
+    private String newPassword;
+
+    @NotBlank
+    private String confirmPassword;
 }
