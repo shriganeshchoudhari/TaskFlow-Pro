@@ -57,8 +57,8 @@ services:
   # ── Backend ─────────────────────────────────────────────────────────────────
   backend:
     build:
-      context: ..
-      dockerfile: docker/Dockerfile.backend
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.backend
     container_name: taskflow-backend
     restart: unless-stopped
     environment:
@@ -92,8 +92,8 @@ services:
   # ── Frontend ─────────────────────────────────────────────────────────────────
   frontend:
     build:
-      context: ..
-      dockerfile: docker/Dockerfile.frontend
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.frontend
       args:
         VITE_API_URL: http://localhost:8080/api/v1
     container_name: taskflow-frontend

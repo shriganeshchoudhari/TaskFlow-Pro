@@ -9,6 +9,7 @@ import com.taskflow.exception.ConflictException;
 import com.taskflow.exception.ResourceNotFoundException;
 import com.taskflow.exception.UnauthorizedException;
 import com.taskflow.model.User;
+import com.taskflow.repository.RefreshTokenRepository;
 import com.taskflow.repository.UserRepository;
 import com.taskflow.security.JwtTokenProvider;
 import java.util.UUID;
@@ -30,6 +31,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManager authenticationManager;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     @Transactional
     public UserResponse register(RegisterRequest request) {
@@ -109,8 +111,9 @@ public class AuthService {
 
     @Transactional
     public void logout(String refreshToken) {
-        // In a production system, blacklist the refresh token in Redis/DB
-        // For simplicity: client-side token removal is handled by the frontend
-        log.info("User logged out (token invalidation)");
+        if (refreshToken != null && !refreshToken.isBlank()) {
+            refreshTokenRepository.revokeByToken(refreshToken);
+        }
+        log.info("User logged out, refresh token revoked");
     }
 }

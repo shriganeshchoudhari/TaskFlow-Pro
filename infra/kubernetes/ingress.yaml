@@ -2,9 +2,24 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: taskflow
+  namespace: taskflow-pro
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
 spec:
+  tls:
+    - hosts:
+        - taskflowpro.com
+        - api.taskflowpro.com
+      secretName: taskflow-tls
   rules:
-    - http:
+    - host: taskflowpro.com
+      http:
         paths:
           - path: /
             pathType: Prefix
@@ -13,11 +28,13 @@ spec:
                 name: taskflow-frontend
                 port:
                   number: 80
-          - path: /api
+    - host: api.taskflowpro.com
+      http:
+        paths:
+          - path: /
             pathType: Prefix
             backend:
               service:
                 name: taskflow-backend
                 port:
                   number: 8080
-

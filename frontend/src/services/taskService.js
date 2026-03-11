@@ -44,6 +44,11 @@ export const projectService = {
 
 // ─── taskService ──────────────────────────────────────────────────────────────
 export const taskService = {
+  async getMyTasks(params = {}) {
+    const response = await api.get('/tasks/my-tasks', { params });
+    return response.data;
+  },
+
   async getProjectTasks(projectId, params = {}) {
     const response = await api.get(`/projects/${projectId}/tasks`, { params });
     return response.data;

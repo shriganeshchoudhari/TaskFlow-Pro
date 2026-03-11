@@ -3,6 +3,8 @@ package com.taskflow.controller;
 import com.taskflow.dto.request.*;
 import com.taskflow.dto.response.*;
 import com.taskflow.service.ProjectService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -17,10 +19,12 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/projects")
 @RequiredArgsConstructor
+@Tag(name = "Projects", description = "Project CRUD and member management")
 public class ProjectController {
 
     private final ProjectService projectService;
 
+    @Operation(summary = "List projects", description = "List all projects the current user is a member of")
     @GetMapping
     public ResponseEntity<Page<ProjectResponse>> getProjects(
             @RequestParam(required = false) String status,
@@ -31,6 +35,7 @@ public class ProjectController {
             projectService.getProjects(status, page, size, currentUser));
     }
 
+    @Operation(summary = "Create project", description = "Create a new project; creator becomes MANAGER")
     @PostMapping
     public ResponseEntity<ProjectResponse> createProject(
             @Valid @RequestBody CreateProjectRequest request,
@@ -39,6 +44,7 @@ public class ProjectController {
             .body(projectService.createProject(request, currentUser));
     }
 
+    @Operation(summary = "Get project", description = "Retrieve project details by ID")
     @GetMapping("/{projectId}")
     public ResponseEntity<ProjectResponse> getProject(
             @PathVariable UUID projectId,
@@ -46,6 +52,7 @@ public class ProjectController {
         return ResponseEntity.ok(projectService.getById(projectId, currentUser));
     }
 
+    @Operation(summary = "Update project", description = "Update project name, description, or status")
     @PutMapping("/{projectId}")
     public ResponseEntity<ProjectResponse> updateProject(
             @PathVariable UUID projectId,
@@ -55,6 +62,7 @@ public class ProjectController {
             projectService.updateProject(projectId, request, currentUser));
     }
 
+    @Operation(summary = "Archive project", description = "Soft-delete (archive) a project")
     @DeleteMapping("/{projectId}")
     public ResponseEntity<Void> archiveProject(
             @PathVariable UUID projectId,
@@ -65,6 +73,7 @@ public class ProjectController {
 
     // ── Members ───────────────────────────────────────────────────────────────
 
+    @Operation(summary = "List members", description = "List all members of a project")
     @GetMapping("/{projectId}/members")
     public ResponseEntity<List<MemberResponse>> getMembers(
             @PathVariable UUID projectId,
@@ -72,6 +81,7 @@ public class ProjectController {
         return ResponseEntity.ok(projectService.getMembers(projectId, currentUser));
     }
 
+    @Operation(summary = "Add member", description = "Add a user to the project")
     @PostMapping("/{projectId}/members")
     public ResponseEntity<MemberResponse> addMember(
             @PathVariable UUID projectId,
@@ -81,6 +91,7 @@ public class ProjectController {
             .body(projectService.addMember(projectId, request, currentUser));
     }
 
+    @Operation(summary = "Remove member", description = "Remove a user from the project")
     @DeleteMapping("/{projectId}/members/{userId}")
     public ResponseEntity<Void> removeMember(
             @PathVariable UUID projectId,
@@ -90,6 +101,7 @@ public class ProjectController {
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Update member role", description = "Change a member's role (MEMBER/MANAGER)")
     @PatchMapping("/{projectId}/members/{userId}/role")
     public ResponseEntity<MemberResponse> updateMemberRole(
             @PathVariable UUID projectId,

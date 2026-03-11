@@ -4,7 +4,7 @@
 
 TaskFlow Pro is an enterprise-grade collaborative task management platform:
 
-- **Backend:** Java 21 · Spring Boot 3.x · Spring Security · JWT (HS512) · JPA/Hibernate · Flyway
+- **Backend:** Java 21 · Spring Boot 3.2.1 · Spring Security · JWT (HS512) · JPA/Hibernate · Flyway
 - **Frontend:** React 18 · Vite · Redux Toolkit · MUI v5
 - **Database:** PostgreSQL 16 · UUID PKs · Flyway versioned migrations
 - **Auth:** JWT — access token 15 min · refresh token 7 days · BCrypt strength 12
@@ -17,40 +17,58 @@ TaskFlow Pro is an enterprise-grade collaborative task management platform:
 
 | Phase | Focus | Duration | Status |
 |-------|-------|----------|--------|
-| **Phase 1** | Foundation & Authentication | Week 1–2 | 🔄 In Progress |
-| **Phase 2** | Project Management | Week 3–4 | ⏳ Pending |
-| **Phase 3** | Task Management | Week 5–6 | ⏳ Pending |
-| **Phase 4** | Comments, Notifications & Activity | Week 7–8 | ⏳ Pending |
-| **Phase 5** | Dashboard, Profile & UI Polish | Week 9–10 | ⏳ Pending |
-| **Phase 6** | DevOps, Testing & Monitoring | Week 11–12 | ⏳ Pending |
+| **Phase 1** | Foundation & Authentication | Week 1–2 | ✅ Complete |
+| **Phase 2** | Project Management | Week 3–4 | ✅ Complete |
+| **Phase 3** | Task Management | Week 5–6 | ✅ Complete |
+| **Phase 4** | Comments, Notifications & Activity | Week 7–8 | ✅ Complete |
+| **Phase 5** | Dashboard, Profile & UI Polish | Week 9–10 | ✅ Complete |
+| **Phase 6** | DevOps, Testing & Monitoring | Week 11–12 | 🔄 In Progress |
 
-> Full breakdown: `TaskFlowPro_Implementation_Plan.docx` · Task IDs follow pattern: `B{phase}-{nn}` (backend), `F{phase}-{nn}` (frontend), `T6-{nn}` (testing), `D6-{nn}` (Docker), `CI6-{nn}` (CI/CD), `K6-{nn}` (Kubernetes)
+> Full breakdown: `TaskFlowPro_Implementation_Plan.docx` · Task IDs: `B{phase}-{nn}` (backend), `F{phase}-{nn}` (frontend), `T6-{nn}` (testing), `D6-{nn}` (Docker), `CI6-{nn}` (CI/CD), `K6-{nn}` (Kubernetes)
 
 ---
 
-## ▶ Current Focus — Phase 1: Foundation & Authentication
+## ▶ Current Focus — Phase 6: DevOps, Testing & Monitoring
 
-### Immediate Next Tasks (start here)
+See `.ai/PHASE6_PLAN.md` for the full ordered execution plan with all known gaps.
 
-**Backend (parallel):**
-- `B1-01` — Flyway V1 migration: `users` table
-- `B1-02` — Flyway V8 migration: `refresh_tokens` table
-- `B1-03` — Configure `application.yml` (datasource, Flyway, HikariCP)
-- `B1-04` — `User` JPA entity + `UserRepository`
-- `B1-05` — `RefreshToken` entity + repository
+### Critical Bugs to Fix First (block everything else)
 
-**Frontend (parallel):**
-- `F1-01` — Init Vite + React 18; install MUI, Redux Toolkit, React Router, Axios
-- `F1-02` — Redux store + `authSlice`
+1. **`AuthServiceTest` fails** — `register_DuplicateEmail_ThrowsException` asserts `UnauthorizedException`
+   but `AuthService.register()` throws `ConflictException`. Fix the assertion before adding more tests.
 
-### Phase 1 Definition of Done
-- [ ] `POST /auth/register` → 201 with user object
-- [ ] `POST /auth/login` → access token + refresh token
-- [ ] `POST /auth/refresh` → rotates tokens correctly
-- [ ] Invalid credentials → 401 with error body
-- [ ] Frontend login form stores token, redirects to `/dashboard` placeholder
-- [ ] Protected routes redirect to `/login` when unauthenticated
-- [ ] `AuthService` unit tests ≥ 80% coverage
+2. **Docker build context bug** — `docker-compose.dev.yml` sets `context: ..` (= `infra/`), but both
+   Dockerfiles `COPY backend/` and `COPY frontend/` expect repo root as context. Change to `context: ../..`.
+
+3. **`UserController` architecture violation** — controller directly injects `UserRepository` and
+   `PasswordEncoder` instead of delegating to `UserService`. Refactor to use `UserService.updateProfile()`
+   and `UserService.updatePassword()`.
+
+### Phase 6 Immediate Next Tasks
+
+**Testing (start here — highest risk area):**
+- `T6-01` — `AuthControllerIT.java` integration tests (Testcontainers)
+- `T6-02` — `TaskServiceTest.java` unit tests
+- `T6-03` — `CommentServiceTest.java`, `NotificationServiceTest.java` unit tests
+- `T6-07` — JaCoCo coverage check (pom.xml already configured; need to verify threshold passes)
+
+**Infrastructure:**
+- `D6-05` — Complete `scripts/setup.sh` (currently a stub)
+- `K6-01` — Flesh out `backend-deployment.yaml` (HPA, probes, resource limits, Prometheus annotations)
+- `K6-02` — Flesh out `frontend-deployment.yaml` + `ingress.yaml` (TLS, HTTPS redirect)
+
+**CI/CD:**
+- `CI6-01` — Complete `backend-ci.yml` (add JaCoCo report step, coverage enforcement)
+- `CI6-04` — Implement `deploy.yml` (currently a stub)
+
+### Phase 6 Definition of Done
+- All backend unit + integration tests pass; JaCoCo ≥ 80% line coverage
+- Playwright E2E suite passes headlessly in CI
+- k6 load test: P95 ≤ 300ms at 500 VUs
+- GitHub Actions CI on every PR; deploy workflow pushes to EKS on main merge
+- No CRITICAL CVEs in Trivy image scan
+- Prometheus scraping; Grafana dashboards show live API metrics
+- `docker-compose up --build` starts full local stack with one command
 
 ---
 
@@ -68,7 +86,8 @@ TaskFlow Pro is an enterprise-grade collaborative task management platform:
 | API test cases | `docs/TEST_CASES_API.md` |
 | E2E test cases | `docs/TEST_CASES_E2E.md` |
 | Deployment & ops | `docs/DEPLOYMENT_OPERATION_MANUAL.md` |
-| Implementation plan | `docs/IMPLEMENTATION_STATUS.md` |
+| Implementation status | `docs/IMPLEMENTATION_STATUS.md` |
+| Phase 6 execution plan | `.ai/PHASE6_PLAN.md` |
 
 ---
 
@@ -93,7 +112,7 @@ TaskFlow Pro is an enterprise-grade collaborative task management platform:
 cd backend
 ./mvnw spring-boot:run                    # Run API server
 ./mvnw test                               # Unit tests only
-./mvnw verify                             # Unit + integration tests
+./mvnw verify -Pintegration-test          # Unit + integration tests
 ./mvnw verify jacoco:report               # With coverage report
 ./mvnw verify -Pcoverage                  # Enforce ≥ 80% coverage threshold
 ```
@@ -108,8 +127,9 @@ npm run lint                              # ESLint
 npm run build                             # Production build → dist/
 ```
 
-### Full Local Stack
+### Full Local Stack (once D6-03 context bug is fixed)
 ```bash
+# Run from repo root:
 docker compose -f infra/docker/docker-compose.dev.yml up --build
 # Starts: PostgreSQL · Redis · Backend · Frontend · Prometheus · Grafana
 ```
@@ -122,7 +142,7 @@ npx playwright test                       # All scenarios (headless Chromium)
 npx playwright test --ui                  # Interactive mode
 ```
 
-### k6 Load Test
+### k6 Load Test (after T6-06 is created)
 ```bash
 cd tests/performance/k6-tests
 k6 run load-test.js                       # Target: P95 < 300ms @ 500 VUs
@@ -130,13 +150,21 @@ k6 run load-test.js                       # Target: P95 < 300ms @ 500 VUs
 
 ---
 
-## Repo Reality Note
+## Known Bugs & Tech Debt
 
-This repo has **both**:
-- `docker/`, `k8s/`, `helm/`, `terraform/` (root-level, existing)
-- `infra/` (added to match target structure — Dockerfiles, compose, k8s manifests, Helm)
-
-**Prefer going forward:**
-- Local dev: `infra/docker/docker-compose.dev.yml`
-- Deployment artifacts: `infra/*`
-- Terraform: `terraform/` (root)
+| ID | Severity | Location | Description |
+|----|----------|----------|-------------|
+| BUG-01 | 🔴 High | `AuthServiceTest.java:42` | Test asserts `UnauthorizedException` but service throws `ConflictException` — test FAILS |
+| BUG-02 | 🔴 High | `docker-compose.dev.yml:build.context` | Context is `..` (=`infra/`); both Dockerfiles expect repo root — Docker build FAILS |
+| BUG-03 | 🟡 Med | `UserController.java` | Controller directly injects `UserRepository` + `PasswordEncoder` instead of using `UserService` — architecture violation |
+| BUG-04 | 🟡 Med | `AuthService.logout()` | Method is a no-op; `RefreshTokenRepository.revokeByToken()` exists but is never called |
+| GAP-01 | 🟡 Med | `SecurityConfig.java` | Rate limiting (B5-04) not implemented — no Bucket4j or RateLimitFilter |
+| GAP-02 | 🟠 Low | All controllers | `@Operation` annotations missing — Swagger shows endpoints but no descriptions |
+| GAP-03 | 🟠 Low | `application.yml` | MDC traceId pattern defined but no `MdcFilter` injects the traceId into MDC |
+| GAP-04 | 🟠 Low | `scripts/setup.sh` | Script is a stub — only prints TODO message |
+| GAP-05 | 🟠 Low | `backend-deployment.yaml` | Minimal stub — no HPA, probes, resource limits, or Prometheus annotations |
+| GAP-06 | 🟠 Low | `ingress.yaml` | Missing TLS config, cert-manager annotations, HTTPS redirect |
+| GAP-07 | 🟠 Low | `monitoring/grafana/dashboards/` | Directory is empty — no Grafana dashboard JSON files |
+| GAP-08 | 🟠 Low | `.github/workflows/deploy.yml` | Stub — only prints a placeholder message |
+| GAP-09 | 🟠 Low | `.github/workflows/backend-ci.yml` | Missing JaCoCo report upload and coverage enforcement step |
+| GAP-10 | 🟠 Low | `tests/performance/k6-tests/` | `load-test.js` does not exist |

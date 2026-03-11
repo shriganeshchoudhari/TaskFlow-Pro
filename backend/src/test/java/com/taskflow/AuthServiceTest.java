@@ -4,6 +4,7 @@ import com.taskflow.dto.request.LoginRequest;
 import com.taskflow.dto.request.RegisterRequest;
 import com.taskflow.dto.response.AuthResponse;
 import com.taskflow.dto.response.UserResponse;
+import com.taskflow.exception.ConflictException;
 import com.taskflow.exception.UnauthorizedException;
 import com.taskflow.model.User;
 import com.taskflow.repository.UserRepository;
@@ -88,7 +89,7 @@ class AuthServiceTest {
         when(userRepository.existsByEmail(TEST_EMAIL)).thenReturn(true);
 
         assertThatThrownBy(() -> authService.register(request))
-            .isInstanceOf(UnauthorizedException.class)
+            .isInstanceOf(ConflictException.class)
             .hasMessageContaining("already registered");
 
         verify(userRepository, never()).save(any());

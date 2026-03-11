@@ -4,7 +4,7 @@
 
 ```
 TaskFlow Pro/
-├── .ai/                    ← AI-assisted dev kit (context, workflows, checklists)
+├── .ai/                    ← AI-assisted dev kit (context, workflows, checklists, plans)
 ├── .github/workflows/      ← CI/CD GitHub Actions (4 workflows)
 ├── backend/                ← Spring Boot API (Maven, Java 21)
 ├── database/               ← Schema SQL + migration reference + seed data
@@ -24,96 +24,106 @@ TaskFlow Pro/
 
 ```
 backend/src/main/java/com/taskflow/
-├── TaskflowApplication.java              ✅ EXISTS
+├── TaskflowApplication.java              ✅ EXISTS  (@SpringBootApplication + @EnableScheduling)
 │
 ├── config/
-│   ├── SecurityConfig.java               ✅ EXISTS  [B1-08]
-│   ├── JwtConfig.java                    🔲 CREATE  [B1-06]
-│   ├── CorsConfig.java                   🔲 CREATE  [B1-08]
-│   └── OpenApiConfig.java                🔲 CREATE  [B5-05]
+│   ├── SecurityConfig.java               ✅ EXISTS  [B1-08] — JWT stateless, CORS, CSRF off
+│   ├── JwtConfig.java                    🔲 NOT NEEDED  (JWT props read directly via @Value)
+│   ├── CorsConfig.java                   🔲 NOT NEEDED  (CORS handled inside SecurityConfig)
+│   └── OpenApiConfig.java                🔲 NOT NEEDED  (Springdoc auto-config via application.yml)
 │
 ├── controller/
-│   ├── AuthController.java               ✅ EXISTS  [B1-10]
-│   ├── UserController.java               🔲 CREATE  [B3-11, B5-03]
-│   ├── ProjectController.java            🔲 CREATE  [B2-08, B2-09]
-│   ├── TaskController.java               ✅ EXISTS  [B3-09]
-│   ├── CommentController.java            🔲 CREATE  [B4-04]
-│   ├── NotificationController.java       🔲 CREATE  [B4-10]
-│   ├── ActivityController.java           🔲 CREATE  [B4-15]
-│   └── DashboardController.java          🔲 CREATE  [B5-01]
+│   ├── AuthController.java               ✅ EXISTS  [B1-10] — register/login/refresh/logout
+│   ├── UserController.java               ⚠️  EXISTS  [B3-11, B5-03] — BUG-03: injects repo directly
+│   ├── ProjectController.java            ✅ EXISTS  [B2-08, B2-09] — full CRUD + members
+│   ├── TaskController.java               ✅ EXISTS  [B3-09] — CRUD + /my-tasks + PATCH /status
+│   ├── CommentController.java            ✅ EXISTS  [B4-04] — GET/POST tasks/{id}/comments
+│   ├── NotificationController.java       ✅ EXISTS  [B4-10] — GET + PATCH read/read-all
+│   ├── ActivityController.java           ✅ EXISTS  [B4-15] — project + task activity feeds
+│   └── DashboardController.java          ✅ EXISTS  [B5-01] — GET /dashboard/summary
 │
 ├── service/
-│   ├── AuthService.java                  ✅ EXISTS  [B1-09]
-│   ├── UserService.java                  🔲 CREATE  [B3-11, B5-03]
-│   ├── ProjectService.java               🔲 CREATE  [B2-05, B2-06, B2-07]
-│   ├── TaskService.java                  ✅ EXISTS  [B3-04 → B3-08]
-│   ├── CommentService.java               🔲 CREATE  [B4-03]
-│   ├── NotificationService.java          🔲 CREATE  [B4-08, B4-09, B4-11]
-│   └── ActivityService.java              🔲 CREATE  [B4-14]
+│   ├── AuthService.java                  ⚠️  EXISTS  [B1-09] — BUG-04: logout() is a no-op
+│   ├── UserService.java                  ✅ EXISTS  [B3-11, B5-03] — updateProfile + password
+│   ├── ProjectService.java               ✅ EXISTS  [B2-05, B2-06, B2-07] — full CRUD + members
+│   ├── TaskService.java                  ✅ EXISTS  [B3-04 → B3-08] — CRUD + status transitions
+│   ├── CommentService.java               ✅ EXISTS  [B4-03] — add/edit/delete + notifications
+│   ├── NotificationService.java          ✅ EXISTS  [B4-08, B4-09, B4-11] — @Scheduled job
+│   └── ActivityService.java              ✅ EXISTS  [B4-14] — logActivity + getProject/TaskActivities
 │
 ├── repository/
-│   ├── UserRepository.java               ✅ EXISTS  [B1-04]
-│   ├── ProjectRepository.java            🔲 CREATE  [B2-03]
-│   ├── ProjectMemberRepository.java      🔲 CREATE  [B2-04]
-│   ├── TaskRepository.java               ✅ EXISTS  [B3-03]
-│   ├── CommentRepository.java            🔲 CREATE  [B4-02]
-│   ├── NotificationRepository.java       🔲 CREATE  [B4-07]
-│   ├── RefreshTokenRepository.java       🔲 CREATE  [B1-05]
-│   └── ActivityRepository.java           🔲 CREATE  [B4-13]
+│   ├── UserRepository.java               ✅ EXISTS  [B1-04] — findByEmail, existsByEmail
+│   ├── ProjectRepository.java            ✅ EXISTS  [B2-03] — findAccessibleByUserId
+│   ├── ProjectMemberRepository.java      ✅ EXISTS  [B2-04] — countActiveProjectsByUserId
+│   ├── TaskRepository.java               ✅ EXISTS  [B3-03] — filters, findDueTomorrow, counts
+│   ├── CommentRepository.java            ✅ EXISTS  [B4-02] — findByTaskIdOrderByCreatedAtAsc
+│   ├── NotificationRepository.java       ✅ EXISTS  [B4-07] — markAllRead, countUnread
+│   ├── RefreshTokenRepository.java       ✅ EXISTS  [B1-05] — revokeByToken, revokeAllByUserId
+│   └── ActivityRepository.java           ✅ EXISTS  [B4-13] — project + task feeds (paginated)
 │
 ├── model/
-│   ├── User.java                         ✅ EXISTS  [B1-04]
-│   ├── Project.java                      ✅ EXISTS  [B2-03]
-│   ├── Task.java                         ✅ EXISTS  [B3-02]
-│   ├── DomainModels.java                 ✅ EXISTS  [B1-05, B2-04, B4-02, B4-07, B4-13]
-│   └── enums/
-│       ├── Role.java                     🔲 CREATE  (ADMIN, MANAGER, MEMBER, VIEWER)
-│       ├── TaskStatus.java               🔲 CREATE  (TODO, IN_PROGRESS, REVIEW, DONE)
-│       ├── TaskPriority.java             🔲 CREATE  (LOW, MEDIUM, HIGH, CRITICAL)
-│       └── ProjectStatus.java            🔲 CREATE  (ACTIVE, ON_HOLD, COMPLETED, ARCHIVED)
+│   ├── User.java                         ✅ EXISTS  [B1-04] — Role enum: ADMIN/MANAGER/MEMBER/VIEWER
+│   ├── Project.java                      ✅ EXISTS  [B2-03] — ProjectStatus + ProjectVisibility enums
+│   ├── Task.java                         ✅ EXISTS  [B3-02] — TaskStatus + TaskPriority enums, tags[]
+│   └── DomainModels.java                 ✅ EXISTS  [B1-05, B2-04, B4-02, B4-07, B4-13]
+│                                                    RefreshToken · Comment · ProjectMember
+│                                                    Notification · Activity
 │
 ├── dto/
 │   ├── request/
-│   │   └── Requests.java                 ✅ EXISTS  [B1-10, B2-10, B3-10, B4-05]
+│   │   └── Requests.java                 ✅ EXISTS  — all request DTOs in one file
 │   └── response/
-│       └── Responses.java                ✅ EXISTS  [B2-10, B3-10, B4-05]
+│       ├── AuthResponse.java             ✅ EXISTS
+│       ├── UserResponse.java             ✅ EXISTS
+│       ├── ProjectResponse.java          ✅ EXISTS
+│       ├── MemberResponse.java           ✅ EXISTS
+│       ├── TaskResponse.java             ✅ EXISTS
+│       ├── CommentResponse.java          ✅ EXISTS
+│       ├── NotificationResponse.java     ✅ EXISTS
+│       └── ActivityResponse.java         ✅ EXISTS
 │
 ├── security/
-│   ├── JwtTokenProvider.java             ✅ EXISTS  [B1-06]
-│   ├── JwtAuthFilter.java                ✅ EXISTS  [B1-07]
-│   └── UserDetailsServiceImpl.java       🔲 CREATE  [B1-08]
+│   ├── JwtTokenProvider.java             ✅ EXISTS  [B1-06] — HS512 access + refresh tokens
+│   ├── JwtAuthFilter.java                ✅ EXISTS  [B1-07] — OncePerRequestFilter
+│   └── UserDetailsServiceImpl.java       ✅ EXISTS  [B1-08] — loads by email, checks isActive
 │
 └── exception/
-    ├── GlobalExceptionHandler.java       ✅ EXISTS  [B1-11]
+    ├── GlobalExceptionHandler.java       ✅ EXISTS  [B1-11] — 400/401/403/404/409/422/500
     ├── ResourceNotFoundException.java    ✅ EXISTS
     ├── UnauthorizedException.java        ✅ EXISTS
-    └── ValidationException.java          🔲 CREATE
+    ├── ConflictException.java            ✅ EXISTS
+    ├── ForbiddenException.java           ✅ EXISTS
+    └── InvalidStatusTransitionException.java  ✅ EXISTS
 ```
 
 ```
 backend/src/main/resources/
-├── application.yml                       ✅ EXISTS  [B1-03]
+├── application.yml                       ✅ EXISTS  [B1-03] — dev + test profiles
 └── db/migration/
-    ├── V1__create_users_table.sql        🔲 CREATE  [B1-01]
-    ├── V2__create_projects_table.sql     🔲 CREATE  [B2-01]
-    ├── V3__create_project_members_table.sql  🔲 CREATE  [B2-02]
-    ├── V4__create_tasks_table.sql        🔲 CREATE  [B3-01]
-    ├── V5__create_comments_table.sql     🔲 CREATE  [B4-01]
-    ├── V6__create_notifications_table.sql 🔲 CREATE  [B4-06]
-    ├── V7__create_activities_table.sql   🔲 CREATE  [B4-12]
-    ├── V8__create_refresh_tokens_table.sql 🔲 CREATE  [B1-02]
-    └── V9__create_indexes.sql            🔲 CREATE  [D6-04]
+    ├── V1__create_users_table.sql        ✅ EXISTS  [B1-01]
+    ├── V2__create_projects_table.sql     ✅ EXISTS  [B2-01]
+    ├── V3__create_project_members_table.sql  ✅ EXISTS  [B2-02]
+    ├── V4__create_tasks_table.sql        ✅ EXISTS  [B3-01]
+    ├── V5__create_comments_table.sql     ✅ EXISTS  [B4-01]
+    ├── V6__create_notifications_table.sql ✅ EXISTS  [B4-06]
+    ├── V7__create_activities_table.sql   ✅ EXISTS  [B4-12]
+    ├── V8__create_refresh_tokens_table.sql ✅ EXISTS  [B1-02]
+    └── V9__create_indexes.sql            ✅ EXISTS  [D6-04]
 ```
 
 ```
 backend/src/test/
 ├── java/com/taskflow/
-│   └── AuthServiceTest.java             ✅ EXISTS  [B1-12]
-│   ProjectServiceTest.java              🔲 CREATE  [T6-02]
-│   TaskServiceTest.java                 🔲 CREATE  [T6-02]
-│   CommentServiceTest.java              🔲 CREATE  [T6-03]
-│   NotificationServiceTest.java         🔲 CREATE  [T6-03]
-│   ActivityServiceTest.java             🔲 CREATE  [T6-03]
+│   └── AuthServiceTest.java             ⚠️  EXISTS  [B1-12] — BUG-01: wrong exception type asserted
+├── unit/README.md                        ✅ EXISTS  (placeholder)
+└── integration/README.md                 ✅ EXISTS  (placeholder)
+
+MISSING — CREATE THESE FOR PHASE 6:
+├── java/com/taskflow/
+│   ├── TaskServiceTest.java             🔲 CREATE  [T6-02]
+│   ├── CommentServiceTest.java          🔲 CREATE  [T6-03]
+│   ├── NotificationServiceTest.java     🔲 CREATE  [T6-03]
+│   └── ActivityServiceTest.java         🔲 CREATE  [T6-03]
 └── integration/
     ├── AuthControllerIT.java            🔲 CREATE  [T6-01]
     ├── ProjectControllerIT.java         🔲 CREATE  [T6-04]
@@ -127,72 +137,67 @@ backend/src/test/
 
 ```
 frontend/src/
-├── main.jsx                             🔲 CREATE  [F1-01]
-├── App.jsx                              ✅ EXISTS  [F1-07, F5-08]
+├── main.jsx                             ✅ EXISTS  [F1-01]
+├── App.jsx                              ✅ EXISTS  [F1-07, F5-08] — lazy-loaded routes
 │
 ├── pages/
 │   ├── LoginPage.jsx                    ✅ EXISTS  [F1-05]
-│   ├── RegisterPage.jsx                 🔲 CREATE  [F1-06]
-│   ├── DashboardPage.jsx                🔲 CREATE  [F5-01]
-│   ├── ProjectListPage.jsx              🔲 CREATE  [F2-03]
-│   ├── ProjectDetailPage.jsx            🔲 CREATE  [F2-06, F4-06]
-│   ├── TaskDetailPage.jsx               🔲 CREATE  [F3-07]
-│   ├── MyTasksPage.jsx                  🔲 CREATE  [F3-09]
-│   └── ProfilePage.jsx                  🔲 CREATE  [F5-06]
+│   ├── RegisterPage.jsx                 ✅ EXISTS  [F1-06] — password strength bar
+│   ├── DashboardPage.jsx                ✅ EXISTS  [F5-01] — 4 stat cards + widgets
+│   ├── ProjectListPage.jsx              ✅ EXISTS  [F2-03] — filter chips, search, grid
+│   ├── ProjectDetailPage.jsx            ✅ EXISTS  [F2-06, F4-06] — Board/List/Members/Activity tabs
+│   ├── TaskDetailPage.jsx               ✅ EXISTS  [F3-07] — inline edit, sidebar, comments
+│   ├── MyTasksPage.jsx                  ✅ EXISTS  [F3-09] — Board/List toggle
+│   ├── ProfilePage.jsx                  ✅ EXISTS  [F5-06] — personal info + change password
+│   └── NotFoundPage.jsx                 ✅ EXISTS
 │
 ├── components/
 │   ├── auth/
 │   │   └── ProtectedRoute.jsx           ✅ EXISTS  [F1-07]
 │   ├── shared/
-│   │   ├── Layout.jsx                   ✅ EXISTS  [F1-08, F5-07, F5-11]
+│   │   ├── Layout.jsx                   ✅ EXISTS  [F1-08, F5-07]
 │   │   ├── NavBar.jsx                   ✅ EXISTS  [F1-08, F4-03]
-│   │   ├── ActivityFeed.jsx             🔲 CREATE  [F4-05]
-│   │   └── ToastProvider.jsx            🔲 CREATE  [F5-13]
+│   │   ├── Sidebar.jsx                  ✅ EXISTS  [F5-07]
+│   │   ├── ActivityFeed.jsx             ✅ EXISTS  [F4-05] — load-more pagination
+│   │   └── ToastProvider.jsx            ✅ EXISTS  [F5-13]
 │   ├── projects/
-│   │   ├── ProjectCard.jsx              🔲 CREATE  [F2-04]
-│   │   ├── CreateProjectModal.jsx       🔲 CREATE  [F2-05]
-│   │   └── ProjectMembersPanel.jsx      🔲 CREATE  [F2-07]
+│   │   ├── ProjectCard.jsx              ✅ EXISTS  [F2-04] — status badge, progress bar, kebab
+│   │   ├── CreateProjectModal.jsx       ✅ EXISTS  [F2-05]
+│   │   └── ProjectMembersPanel.jsx      ✅ EXISTS  [F2-07] — invite by email, role selector
 │   ├── tasks/
-│   │   ├── BoardView.jsx                🔲 CREATE  [F3-03]
-│   │   ├── TaskCard.jsx                 🔲 CREATE  [F3-04, F3-08]
-│   │   ├── CreateTaskDialog.jsx         🔲 CREATE  [F3-05]
-│   │   ├── ListView.jsx                 🔲 CREATE  [F3-06]
-│   │   └── CommentSection.jsx           🔲 CREATE  [F4-01]
+│   │   ├── BoardView.jsx                ✅ EXISTS  [F3-03] — 4 columns, horizontal scroll
+│   │   ├── TaskCard.jsx                 ✅ EXISTS  [F3-04, F3-08] — priority strip, tags, optimistic
+│   │   ├── CreateTaskDialog.jsx         ✅ EXISTS  [F3-05]
+│   │   ├── ListView.jsx                 ✅ EXISTS  [F3-06] — sortable table
+│   │   └── CommentSection.jsx           ✅ EXISTS  [F4-01] — 30s poll, edit/delete
 │   ├── notifications/
-│   │   └── NotificationDropdown.jsx     🔲 CREATE  [F4-04]
+│   │   └── NotificationBell.jsx         ✅ EXISTS  [F4-03, F4-04] — badge, dropdown, 60s poll
 │   └── dashboard/
-│       ├── StatCard.jsx                 🔲 CREATE  [F5-02]
-│       ├── MyTasksWidget.jsx            🔲 CREATE  [F5-03]
-│       ├── RecentActivityWidget.jsx     🔲 CREATE  [F5-04]
-│       └── MyProjectsGrid.jsx           🔲 CREATE  [F5-05]
+│       └── StatCard.jsx                 ✅ EXISTS  [F5-02]
 │
 ├── store/
 │   ├── index.js                         ✅ EXISTS  [F1-02]
 │   └── slices/
-│       ├── authSlice.js                 ✅ EXISTS  [F1-02]
-│       ├── projectsSlice.js             🔲 CREATE  [F2-02]
-│       ├── tasksSlice.js                🔲 CREATE  [F3-02]
-│       ├── notificationsSlice.js        🔲 CREATE  [F4-07]
-│       └── uiSlice.js                   🔲 CREATE  [F5-01]
+│       ├── authSlice.js                 ✅ EXISTS  [F1-02] — login/register/logout/refresh
+│       ├── projectsSlice.js             ✅ EXISTS  [F2-02] — full CRUD + members
+│       ├── tasksSlice.js                ✅ EXISTS  [F3-02] — CRUD + optimistic status + byStatus
+│       ├── notificationsSlice.js        ✅ EXISTS  [F4-07] — fetchNotifications + markRead
+│       └── uiSlice.js                   ✅ EXISTS  [F5-01]
 │
 ├── services/
-│   ├── api.js                           ✅ EXISTS  [F1-03]
+│   ├── api.js                           ✅ EXISTS  [F1-03] — Axios + 401 interceptor + refresh
 │   ├── authService.js                   ✅ EXISTS  [F1-04]
-│   ├── projectService.js                🔲 CREATE  [F2-01]
-│   ├── taskService.js                   ✅ EXISTS  [F3-01]
-│   ├── commentService.js                🔲 CREATE  [F4-02]
-│   └── notificationService.js           🔲 CREATE  [F4-02]
+│   ├── projectService.js                ✅ EXISTS  [F2-01]
+│   ├── taskService.js                   ✅ EXISTS  [F3-01] — taskService + commentService + notifService
+│   ├── commentService.js                ✅ EXISTS  [F4-02]
+│   └── notificationService.js           ✅ EXISTS  [F4-02]
 │
-├── hooks/
-│   ├── useAuth.js                       🔲 CREATE
-│   ├── useProjects.js                   🔲 CREATE
-│   ├── useTasks.js                      🔲 CREATE
-│   └── useNotifications.js              🔲 CREATE
-│
-└── utils/
-    ├── constants.js                     🔲 CREATE  (API routes, status enums)
-    ├── dateUtils.js                     🔲 CREATE
-    └── validators.js                    🔲 CREATE
+MISSING — CREATE FOR PHASE 6 (VITEST):
+└── __tests__/
+    ├── LoginPage.test.jsx               🔲 CREATE  [T6-08]
+    ├── TaskCard.test.jsx                🔲 CREATE  [T6-08]
+    ├── BoardView.test.jsx               🔲 CREATE  [T6-08]
+    └── NotificationBell.test.jsx        🔲 CREATE  [T6-08]
 ```
 
 ---
@@ -211,10 +216,10 @@ tests/
 │   └── playwright/
 │       ├── playwright.config.ts         ✅ EXISTS
 │       └── tests/
-│           └── taskflow.spec.ts         ✅ EXISTS  [T6-05]
+│           └── taskflow.spec.ts         ✅ EXISTS  [T6-05] — Auth + Project + Task + Notif flows
 └── performance/
     └── k6-tests/
-        └── load-test.js                 🔲 CREATE  [T6-06]
+        └── load-test.js                 🔲 CREATE  [T6-06] — P95 < 300ms @ 500 VUs
 ```
 
 ---
@@ -224,20 +229,45 @@ tests/
 ```
 infra/
 ├── docker/
-│   ├── docker-compose.dev.yml           ✅ EXISTS  [D6-03]
+│   ├── docker-compose.dev.yml           ⚠️  EXISTS  [D6-03] — BUG-02: wrong build context
 │   ├── docker-compose.yml               ✅ EXISTS
+│   ├── nginx.conf                       🔲 VERIFY/CREATE  (referenced by Dockerfile.frontend)
 │   └── dockerfiles/
-│       ├── Dockerfile.backend           ✅ EXISTS  [D6-01]
-│       └── Dockerfile.frontend          ✅ EXISTS  [D6-02]
+│       ├── Dockerfile.backend           ✅ EXISTS  [D6-01] — multi-stage, non-root, HEALTHCHECK
+│       └── Dockerfile.frontend          ✅ EXISTS  [D6-02] — node build + nginx:alpine, SPA fallback
 ├── helm/
 │   └── taskflow-chart/
 │       ├── Chart.yaml                   ✅ EXISTS
 │       └── values.yaml                  ✅ EXISTS
 └── kubernetes/
-    ├── backend-deployment.yaml          ✅ EXISTS  [K6-01]
-    ├── frontend-deployment.yaml         ✅ EXISTS  [K6-02]
-    ├── ingress.yaml                     ✅ EXISTS  [K6-02]
+    ├── backend-deployment.yaml          ⚠️  EXISTS  [K6-01] — stub (no HPA, no probes, no limits)
+    ├── frontend-deployment.yaml         ⚠️  EXISTS  [K6-02] — stub (no limits, no probes)
+    ├── ingress.yaml                     ⚠️  EXISTS  [K6-02] — stub (no TLS, no HTTPS redirect)
     └── services.yaml                    ✅ EXISTS
+```
+
+---
+
+## Monitoring — File Map
+
+```
+monitoring/
+├── prometheus/
+│   └── prometheus.yml                   ✅ EXISTS  [K6-03] — K8s SD + Actuator scrape config
+└── grafana/
+    ├── dashboards/                       🔲 EMPTY   [K6-04] — needs dashboard JSON files
+    └── provisioning/                     🔲 EMPTY   [K6-04] — needs datasource + dashboard provisioning YAML
+```
+
+---
+
+## Scripts — File Map
+
+```
+scripts/
+├── build.sh                             ✅ EXISTS
+├── deploy.sh                            ✅ EXISTS
+└── setup.sh                             ⚠️  EXISTS  [D6-05] — stub (only prints TODO)
 ```
 
 ---
@@ -246,10 +276,10 @@ infra/
 
 ```
 .github/workflows/
-├── backend-ci.yml                       ✅ EXISTS  [CI6-01]
-├── frontend-ci.yml                      ✅ EXISTS  [CI6-02]
-├── e2e-tests.yml                        ✅ EXISTS  [CI6-03]
-└── deploy.yml                           ✅ EXISTS  [CI6-04]
+├── backend-ci.yml                       ⚠️  EXISTS  [CI6-01] — runs tests but missing JaCoCo upload
+├── frontend-ci.yml                      ✅ EXISTS  [CI6-02] — lint + test + build
+├── e2e-tests.yml                        ⚠️  EXISTS  [CI6-03] — doesn't spin up docker-compose stack
+└── deploy.yml                           ⚠️  EXISTS  [CI6-04] — stub (prints placeholder only)
 ```
 
 ---

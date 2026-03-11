@@ -5,6 +5,8 @@ import com.taskflow.dto.request.UpdateTaskRequest;
 import com.taskflow.dto.request.UpdateTaskStatusRequest;
 import com.taskflow.dto.response.TaskResponse;
 import com.taskflow.service.TaskService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -20,11 +22,13 @@ import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
+@Tag(name = "Tasks", description = "Task CRUD and status management")
 public class TaskController {
 
     private final TaskService taskService;
 
     // ── My Tasks (must appear before /{taskId} to avoid route conflicts) ──────
+    @Operation(summary = "Get my tasks", description = "List all tasks assigned to the current user")
     @GetMapping("/api/v1/tasks/my-tasks")
     public ResponseEntity<Page<TaskResponse>> getMyTasks(
             @PageableDefault(size = 20) Pageable pageable,
@@ -33,6 +37,7 @@ public class TaskController {
     }
 
     // ── Project-scoped task endpoints ─────────────────────────────────────────
+    @Operation(summary = "Get project tasks", description = "List tasks in a project with optional filters")
     @GetMapping("/api/v1/projects/{projectId}/tasks")
     public ResponseEntity<Page<TaskResponse>> getProjectTasks(
             @PathVariable UUID projectId,
@@ -45,6 +50,7 @@ public class TaskController {
             projectId, status, priority, assigneeId, pageable, currentUser));
     }
 
+    @Operation(summary = "Create task", description = "Create a new task in a project")
     @PostMapping("/api/v1/projects/{projectId}/tasks")
     public ResponseEntity<TaskResponse> createTask(
             @PathVariable UUID projectId,
@@ -55,6 +61,7 @@ public class TaskController {
     }
 
     // ── Single task endpoints ─────────────────────────────────────────────────
+    @Operation(summary = "Get task", description = "Retrieve a single task by ID")
     @GetMapping("/api/v1/tasks/{taskId}")
     public ResponseEntity<TaskResponse> getTask(
             @PathVariable UUID taskId,
@@ -62,6 +69,7 @@ public class TaskController {
         return ResponseEntity.ok(taskService.getTask(taskId, currentUser));
     }
 
+    @Operation(summary = "Update task", description = "Update task title, description, priority, assignee, etc.")
     @PutMapping("/api/v1/tasks/{taskId}")
     public ResponseEntity<TaskResponse> updateTask(
             @PathVariable UUID taskId,
@@ -70,6 +78,7 @@ public class TaskController {
         return ResponseEntity.ok(taskService.updateTask(taskId, request, currentUser));
     }
 
+    @Operation(summary = "Update task status", description = "Transition task status (enforces valid state machine)")
     @PatchMapping("/api/v1/tasks/{taskId}/status")
     public ResponseEntity<TaskResponse> updateTaskStatus(
             @PathVariable UUID taskId,
@@ -79,6 +88,7 @@ public class TaskController {
             taskService.updateTaskStatus(taskId, request.getStatus(), currentUser));
     }
 
+    @Operation(summary = "Delete task", description = "Delete a task (managers only)")
     @DeleteMapping("/api/v1/tasks/{taskId}")
     public ResponseEntity<Void> deleteTask(
             @PathVariable UUID taskId,

@@ -1,17 +1,83 @@
-name: Deploy
+name: Deploy to EKS
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: production
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Placeholder
-        run: |
-          echo "Deploy workflow stub."
-          echo "Wire this to your target (Docker/Kubernetes/Helm/Terraform) when ready."
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
 
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push backend image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -f infra/docker/Dockerfile.backend \
+            -t $ECR_REGISTRY/taskflow-backend:$IMAGE_TAG \
+            -t $ECR_REGISTRY/taskflow-backend:latest .
+          docker push $ECR_REGISTRY/taskflow-backend:$IMAGE_TAG
+          docker push $ECR_REGISTRY/taskflow-backend:latest
+
+      - name: Build and push frontend image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -f infra/docker/Dockerfile.frontend \
+            --build-arg VITE_API_URL=https://api.taskflowpro.com/api/v1 \
+            -t $ECR_REGISTRY/taskflow-frontend:$IMAGE_TAG \
+            -t $ECR_REGISTRY/taskflow-frontend:latest .
+          docker push $ECR_REGISTRY/taskflow-frontend:$IMAGE_TAG
+          docker push $ECR_REGISTRY/taskflow-frontend:latest
+
+      - name: Update kubeconfig for EKS
+        run: |
+          aws eks update-kubeconfig \
+            --region us-east-1 \
+            --name ${{ secrets.EKS_CLUSTER_NAME }}
+
+      - name: Deploy backend (rolling update)
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          kubectl set image deployment/taskflow-backend \
+            backend=$ECR_REGISTRY/taskflow-backend:$IMAGE_TAG \
+            -n taskflow-pro
+          kubectl rollout status deployment/taskflow-backend -n taskflow-pro --timeout=5m
+
+      - name: Deploy frontend (rolling update)
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          kubectl set image deployment/taskflow-frontend \
+            frontend=$ECR_REGISTRY/taskflow-frontend:$IMAGE_TAG \
+            -n taskflow-pro
+          kubectl rollout status deployment/taskflow-frontend -n taskflow-pro --timeout=3m
+
+      - name: Smoke test production
+        run: |
+          PROD_URL=https://api.taskflowpro.com
+          curl -sf $PROD_URL/actuator/health | grep -q '"UP"' \
+            || (echo "Production health check FAILED" && exit 1)
+          echo "✅ Production deployment successful"

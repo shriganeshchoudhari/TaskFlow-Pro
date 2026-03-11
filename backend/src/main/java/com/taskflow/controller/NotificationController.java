@@ -5,6 +5,8 @@ import com.taskflow.exception.UnauthorizedException;
 import com.taskflow.model.User;
 import com.taskflow.repository.UserRepository;
 import com.taskflow.service.NotificationService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,11 +22,13 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/notifications")
 @RequiredArgsConstructor
+@Tag(name = "Notifications", description = "User notification management")
 public class NotificationController {
 
     private final NotificationService notificationService;
     private final UserRepository userRepository;
 
+    @Operation(summary = "Get notifications", description = "List notifications with optional read/unread filter")
     @GetMapping
     public ResponseEntity<Map<String, Object>> getNotifications(
             @RequestParam(required = false) Boolean isRead,
@@ -41,6 +45,7 @@ public class NotificationController {
         ));
     }
 
+    @Operation(summary = "Mark as read", description = "Mark a single notification as read")
     @PatchMapping("/{notificationId}/read")
     public ResponseEntity<NotificationResponse> markAsRead(
             @PathVariable UUID notificationId,
@@ -49,6 +54,7 @@ public class NotificationController {
         return ResponseEntity.ok(notificationService.markAsRead(notificationId, user.getId()));
     }
 
+    @Operation(summary = "Mark all as read", description = "Mark all user notifications as read")
     @PatchMapping("/read-all")
     public ResponseEntity<Void> markAllAsRead(
             @AuthenticationPrincipal UserDetails currentUser) {

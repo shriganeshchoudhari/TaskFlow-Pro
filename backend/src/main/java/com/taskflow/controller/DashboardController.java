@@ -6,6 +6,8 @@ import com.taskflow.repository.NotificationRepository;
 import com.taskflow.repository.ProjectMemberRepository;
 import com.taskflow.repository.TaskRepository;
 import com.taskflow.repository.UserRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -20,6 +22,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/dashboard")
 @RequiredArgsConstructor
+@Tag(name = "Dashboard", description = "Aggregated dashboard metrics")
 public class DashboardController {
 
     private final UserRepository         userRepository;
@@ -27,6 +30,7 @@ public class DashboardController {
     private final ProjectMemberRepository projectMemberRepository;
     private final NotificationRepository notificationRepository;
 
+    @Operation(summary = "Get dashboard summary", description = "Aggregate counts: active tasks, due this week, projects, unread notifications")
     @GetMapping("/summary")
     public ResponseEntity<Map<String, Object>> getSummary(
             @AuthenticationPrincipal UserDetails currentUser) {
