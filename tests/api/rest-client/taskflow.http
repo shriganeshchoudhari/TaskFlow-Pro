@@ -1,36 +1,117 @@
-### TaskFlow Pro - REST Client API Requests
+### TaskFlow Pro - REST Client API Requests (Complete Exhaustive Suite)
 ### VS Code REST Client Extension
 
 ### ─── Variables ────────────────────────────────────────────────────────────
 @baseUrl = http://localhost:8080/api/v1
 @contentType = application/json
-# After login, manually set this:
+# Run "Login - Valid User 1 (Manager)" first to populate these
 @accessToken = YOUR_ACCESS_TOKEN_HERE
 @refreshToken = YOUR_REFRESH_TOKEN_HERE
 @projectId = YOUR_PROJECT_ID_HERE
 @taskId = YOUR_TASK_ID_HERE
+@commentId = YOUR_COMMENT_ID_HERE
 
-### ─── 1. Register New User ────────────────────────────────────────────────
+# Second user token to test RBAC properties
+@user2Token = YOUR_USER2_ACCESS_TOKEN_HERE
+
+### =========================================================================
+### 1. AUTHENTICATION ENDPOINTS
+### =========================================================================
+
+### A-01: Register new user (Happy Path)
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "fullName": "Manager User 1",
+  "email": "manager1@example.com",
+  "password": "SecurePass123!"
+}
+
+### A-02: Register - duplicate email
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "fullName": "Duplicate User",
+  "email": "manager1@example.com",
+  "password": "SecurePass123!"
+}
+# Expect 409 CONFLICT
+
+### A-03: Register - invalid email
 POST {{baseUrl}}/auth/register
 Content-Type: {{contentType}}
 
 {
   "fullName": "Jane Smith",
-  "email": "jane@example.com",
-  "password": "TestPass123!"
+  "email": "not-an-email",
+  "password": "SecurePass123!"
+}
+# Expect 400 Validation Error
+
+### A-04: Register - weak password
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "fullName": "Jane Smith",
+  "email": "jane2@example.com",
+  "password": "weak"
+}
+# Expect 400 Validation Error
+
+### Registar Second User (For RBAC tests)
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "fullName": "Member User 2",
+  "email": "member2@example.com",
+  "password": "SecurePass123!"
 }
 
-### ─── 2. Login ────────────────────────────────────────────────────────────
-# @name login
+### A-05: Login - valid credentials (User 1 - Manager)
+# @name loginUser1
 POST {{baseUrl}}/auth/login
 Content-Type: {{contentType}}
 
 {
-  "email": "jane@example.com",
-  "password": "TestPass123!"
+  "email": "manager1@example.com",
+  "password": "SecurePass123!"
 }
 
-### ─── 3. Refresh Token ─────────────────────────────────────────────────────
+### Login - valid credentials (User 2 - Member)
+# @name loginUser2
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "member2@example.com",
+  "password": "SecurePass123!"
+}
+
+### A-06: Login - wrong password
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "manager1@example.com",
+  "password": "WrongPassword!123"
+}
+# Expect 401 UNAUTHORIZED
+
+### A-07: Login - unknown email
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "nobody@example.com",
+  "password": "SecurePass123!"
+}
+# Expect 401 UNAUTHORIZED
+
+### A-09: Refresh token
 POST {{baseUrl}}/auth/refresh
 Content-Type: {{contentType}}
 
@@ -38,55 +119,268 @@ Content-Type: {{contentType}}
   "refreshToken": "{{refreshToken}}"
 }
 
-### ─── 4. Get My Profile ────────────────────────────────────────────────────
+### A-10: Refresh - invalid token
+POST {{baseUrl}}/auth/refresh
+Content-Type: {{contentType}}
+
+{
+  "refreshToken": "garbage-token-xyz"
+}
+# Expect 401 UNAUTHORIZED
+
+### A-12: Logout
+POST {{baseUrl}}/auth/logout
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+### =========================================================================
+### 2. USER ENDPOINTS
+### =========================================================================
+
+### U-01: Get current user
 GET {{baseUrl}}/users/me
 Authorization: Bearer {{accessToken}}
-Accept: {{contentType}}
 
-### ─── 5. Create Project ────────────────────────────────────────────────────
+### U-02: Get current user — no auth
+GET {{baseUrl}}/users/me
+# Expect 401 UNAUTHORIZED
+
+### U-03: Update profile
+PUT {{baseUrl}}/users/me
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "fullName": "Manager User Updated",
+  "avatarUrl": "https://example.com/avatar1.jpg"
+}
+
+### U-04: Update profile - validation error
+PUT {{baseUrl}}/users/me
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "fullName": ""
+}
+# Expect 400
+
+### U-05: Change password - valid
+PUT {{baseUrl}}/users/me/password
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "currentPassword": "SecurePass123!",
+  "newPassword": "NewSecurePass123!"
+}
+
+### U-06: Change password - wrong current
+PUT {{baseUrl}}/users/me/password
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "currentPassword": "WrongPass123!",
+  "newPassword": "AnotherPass123!"
+}
+# Expect 401 UNAUTHORIZED
+
+### Revert Password
+PUT {{baseUrl}}/users/me/password
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "currentPassword": "NewSecurePass123!",
+  "newPassword": "SecurePass123!"
+}
+
+
+### =========================================================================
+### 3. PROJECT ENDPOINTS
+### =========================================================================
+
+### P-01: Create project
 POST {{baseUrl}}/projects
 Authorization: Bearer {{accessToken}}
 Content-Type: {{contentType}}
 
 {
-  "name": "My First Project",
-  "description": "A test project created via REST client",
+  "name": "E2E API Test Project",
+  "description": "Comprehensive testing project",
   "visibility": "PRIVATE",
   "status": "ACTIVE"
 }
 
-### ─── 6. Get All Projects ──────────────────────────────────────────────────
-GET {{baseUrl}}/projects?page=0&size=10&status=ACTIVE
-Authorization: Bearer {{accessToken}}
-Accept: {{contentType}}
+### P-02: Create project — no auth
+POST {{baseUrl}}/projects
+Content-Type: {{contentType}}
 
-### ─── 7. Get Project by ID ─────────────────────────────────────────────────
+{
+  "name": "No Auth Project"
+}
+# Expect 401
+
+### P-03: Create project — missing name
+POST {{baseUrl}}/projects
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "description": "Missing title"
+}
+# Expect 400
+
+### P-04: List projects
+GET {{baseUrl}}/projects
+Authorization: Bearer {{accessToken}}
+
+### P-05: List projects — filter status
+GET {{baseUrl}}/projects?status=ACTIVE
+Authorization: Bearer {{accessToken}}
+
+### P-06: List projects — pagination
+GET {{baseUrl}}/projects?page=0&size=2
+Authorization: Bearer {{accessToken}}
+
+### P-07: Get project by ID
 GET {{baseUrl}}/projects/{{projectId}}
 Authorization: Bearer {{accessToken}}
 
-### ─── 8. Create Task ──────────────────────────────────────────────────────
+### P-08: Get project — non-member private
+GET {{baseUrl}}/projects/{{projectId}}
+Authorization: Bearer {{user2Token}}
+# Expect 403 FORBIDDEN
+
+### P-09: Get project — not found
+GET {{baseUrl}}/projects/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{accessToken}}
+# Expect 404 NOT_FOUND
+
+### P-10: Update project
+PUT {{baseUrl}}/projects/{{projectId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "name": "Updated E2E Test Project",
+  "description": "Updated description"
+}
+
+### P-14: Add member (user2@example.com)
+POST {{baseUrl}}/projects/{{projectId}}/members
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "email": "member2@example.com",
+  "role": "MEMBER"
+}
+
+### P-15: Add member - already added
+POST {{baseUrl}}/projects/{{projectId}}/members
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "email": "member2@example.com",
+  "role": "MEMBER"
+}
+# Expect 409 CONFLICT
+
+### P-17: Get members
+GET {{baseUrl}}/projects/{{projectId}}/members
+Authorization: Bearer {{accessToken}}
+
+### P-11: Update project — non-manager
+PUT {{baseUrl}}/projects/{{projectId}}
+Authorization: Bearer {{user2Token}}
+Content-Type: {{contentType}}
+
+{
+  "name": "Member trying to update name"
+}
+# Expect 403 (User 2 is MEMBER, not MANAGER)
+
+### P-12: Archive project
+DELETE {{baseUrl}}/projects/{{projectId}}
+Authorization: Bearer {{accessToken}}
+
+### P-13: Archived hidden
+GET {{baseUrl}}/projects?status=ACTIVE
+Authorization: Bearer {{accessToken}}
+# Should not return the archived project (until un-archived)
+
+
+### =========================================================================
+### 4. TASK ENDPOINTS
+### =========================================================================
+
+# Reactivate Project First
+PUT {{baseUrl}}/projects/{{projectId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "status": "ACTIVE"
+}
+
+### T-01: Create task
 POST {{baseUrl}}/projects/{{projectId}}/tasks
 Authorization: Bearer {{accessToken}}
 Content-Type: {{contentType}}
 
 {
-  "title": "Implement login page",
-  "description": "Create a responsive login form with validation",
+  "title": "API Edge Case Task",
+  "description": "Task created for testing edge cases",
   "priority": "HIGH",
   "status": "TODO",
-  "dueDate": "2025-12-31",
-  "tags": ["frontend", "auth"]
+  "tags": ["api", "testing"]
 }
 
-### ─── 9. Get Tasks in Project ──────────────────────────────────────────────
-GET {{baseUrl}}/projects/{{projectId}}/tasks?page=0&size=20
+### T-02: Create Task - non-member
+POST {{baseUrl}}/projects/{{projectId}}/tasks
+Authorization: Bearer garbage-user-token-xyz
+# Expect 401/403
+
+### T-03: Create task — missing title
+POST {{baseUrl}}/projects/{{projectId}}/tasks
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "priority": "HIGH"
+}
+# Expect 400
+
+### T-04: List tasks
+GET {{baseUrl}}/projects/{{projectId}}/tasks
 Authorization: Bearer {{accessToken}}
 
-### ─── 10. Get Task by ID ───────────────────────────────────────────────────
+### T-05: Filter tasks by status
+GET {{baseUrl}}/projects/{{projectId}}/tasks?status=TODO
+Authorization: Bearer {{accessToken}}
+
+### T-07: Get task by ID
 GET {{baseUrl}}/tasks/{{taskId}}
 Authorization: Bearer {{accessToken}}
 
-### ─── 11. Update Task Status ──────────────────────────────────────────────
+### T-08: Update task
+PUT {{baseUrl}}/tasks/{{taskId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "title": "Updated API Edge Case Task",
+  "priority": "CRITICAL"
+}
+
+### T-10: Status update — valid
 PATCH {{baseUrl}}/tasks/{{taskId}}/status
 Authorization: Bearer {{accessToken}}
 Content-Type: {{contentType}}
@@ -95,61 +389,144 @@ Content-Type: {{contentType}}
   "status": "IN_PROGRESS"
 }
 
-### ─── 12. Update Task Details ─────────────────────────────────────────────
-PUT {{baseUrl}}/tasks/{{taskId}}
+### T-11: Status update — invalid transition
+PATCH {{baseUrl}}/tasks/{{taskId}}/status
 Authorization: Bearer {{accessToken}}
 Content-Type: {{contentType}}
 
 {
-  "title": "Updated task title",
-  "priority": "CRITICAL",
-  "description": "Updated description with more details"
+  "status": "TODO"
 }
+# Valid is IN_PROGRESS -> REVIEW or DONE. Expect 422 INVALID_STATUS_TRANSITION
 
-### ─── 13. Add Comment to Task ─────────────────────────────────────────────
+### T-14: Get my tasks
+GET {{baseUrl}}/tasks/my-tasks
+Authorization: Bearer {{accessToken}}
+
+
+### =========================================================================
+### 5. COMMENT ENDPOINTS
+### =========================================================================
+
+### C-01: Add comment
 POST {{baseUrl}}/tasks/{{taskId}}/comments
 Authorization: Bearer {{accessToken}}
 Content-Type: {{contentType}}
 
 {
-  "content": "Working on this now! Will have a PR ready by EOD."
+  "content": "Initial comment content"
 }
 
-### ─── 14. Get Comments ─────────────────────────────────────────────────────
+### C-03: Add comment - empty content
+POST {{baseUrl}}/tasks/{{taskId}}/comments
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "content": ""
+}
+# Expect 400 (if empty string blocked) or fast failure
+
+### C-04: Get comments
 GET {{baseUrl}}/tasks/{{taskId}}/comments
 Authorization: Bearer {{accessToken}}
 
-### ─── 15. Get Notifications ───────────────────────────────────────────────
-GET {{baseUrl}}/notifications?page=0&size=20&isRead=false
-Authorization: Bearer {{accessToken}}
-
-### ─── 16. Mark All Notifications Read ─────────────────────────────────────
-PATCH {{baseUrl}}/notifications/read-all
-Authorization: Bearer {{accessToken}}
-
-### ─── 17. Get Project Activity ─────────────────────────────────────────────
-GET {{baseUrl}}/projects/{{projectId}}/activities?page=0&size=20
-Authorization: Bearer {{accessToken}}
-
-### ─── 18. Add Member to Project ────────────────────────────────────────────
-POST {{baseUrl}}/projects/{{projectId}}/members
+### C-05: Edit own comment
+PUT {{baseUrl}}/comments/{{commentId}}
 Authorization: Bearer {{accessToken}}
 Content-Type: {{contentType}}
 
 {
-  "email": "developer@example.com",
-  "role": "MEMBER"
+  "content": "Edited comment content"
 }
 
-### ─── 19. Delete Task ──────────────────────────────────────────────────────
+### C-06: Edit another's comment
+PUT {{baseUrl}}/comments/{{commentId}}
+Authorization: Bearer {{user2Token}}
+Content-Type: {{contentType}}
+
+{
+  "content": "Hacked comment content"
+}
+# Expect 403 FORBIDDEN
+
+### C-07: Delete own comment
+DELETE {{baseUrl}}/comments/{{commentId}}
+Authorization: Bearer {{accessToken}}
+
+
+### =========================================================================
+### 6. NOTIFICATION ENDPOINTS
+### =========================================================================
+
+### N-01: Get notifications
+GET {{baseUrl}}/notifications
+Authorization: Bearer {{user2Token}}
+
+### N-02: Filter unread only
+GET {{baseUrl}}/notifications?isRead=false
+Authorization: Bearer {{user2Token}}
+
+### N-06: Mark all as read
+PATCH {{baseUrl}}/notifications/read-all
+Authorization: Bearer {{user2Token}}
+
+
+### =========================================================================
+### 7. ACTIVITY ENDPOINTS
+### =========================================================================
+
+### AC-01: Get project activities
+GET {{baseUrl}}/projects/{{projectId}}/activities
+Authorization: Bearer {{accessToken}}
+
+### AC-02: Get task activities
+GET {{baseUrl}}/tasks/{{taskId}}/activities
+Authorization: Bearer {{accessToken}}
+
+
+### =========================================================================
+### 8. DASHBOARD ENDPOINTS
+### =========================================================================
+
+### D-01: Get dashboard summary
+GET {{baseUrl}}/dashboard/summary
+Authorization: Bearer {{accessToken}}
+
+### D-02: Dashboard (no auth)
+GET {{baseUrl}}/dashboard/summary
+# Expect 401 UNAUTHORIZED
+
+
+### =========================================================================
+### ERRORS & CLEANUP (Cross-phase)
+### =========================================================================
+
+### E-01: Malformed JSON
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "manager1@example.com"
+  "password": 
+# Expect 400 BAD_REQUEST
+
+### E-02: Wrong Content-Type
+POST {{baseUrl}}/auth/login
+Content-Type: text/plain
+
+{"email": "test@test.com"}
+# Expect 415 UNSUPPORTED_MEDIA_TYPE
+
+### E-06: UUID format violation
+GET {{baseUrl}}/tasks/not-a-valid-uuid-123
+Authorization: Bearer {{accessToken}}
+# Expect 400 BAD_REQUEST
+
+### T-12: Delete task
 DELETE {{baseUrl}}/tasks/{{taskId}}
 Authorization: Bearer {{accessToken}}
 
-### ─── 20. Logout ──────────────────────────────────────────────────────────
-POST {{baseUrl}}/auth/logout
+### P-18: Remove member
+DELETE {{baseUrl}}/projects/{{projectId}}/members/YOUR_USER2_UUID_HERE
 Authorization: Bearer {{accessToken}}
-Content-Type: {{contentType}}
-
-{
-  "refreshToken": "{{refreshToken}}"
-}

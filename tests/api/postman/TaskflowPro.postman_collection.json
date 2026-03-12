@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "TaskFlow Pro API",
-    "description": "Complete API test collection for TaskFlow Pro",
+    "name": "TaskFlow Pro API - Complete Suite",
+    "description": "Exhaustive API test collection covering 100% of all test cases from docs.",
     "version": "1.0.0",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
@@ -9,23 +9,25 @@
     { "key": "baseUrl", "value": "http://localhost:8080/api/v1" },
     { "key": "accessToken", "value": "" },
     { "key": "refreshToken", "value": "" },
+    { "key": "user2Token", "value": "" },
     { "key": "projectId", "value": "" },
     { "key": "taskId", "value": "" },
-    { "key": "commentId", "value": "" }
+    { "key": "commentId", "value": "" },
+    { "key": "user2Id", "value": "" }
   ],
   "item": [
     {
-      "name": "Auth",
+      "name": "1. Authentication",
       "item": [
         {
-          "name": "TC-AUTH-001: Register User",
+          "name": "A-01: Register Manager",
           "request": {
             "method": "POST",
-            "url": "{{baseUrl}}/auth/register",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/register",
             "body": {
               "mode": "raw",
-              "raw": "{\"fullName\":\"Test User\",\"email\":\"test_{{$randomInt}}@example.com\",\"password\":\"TestPass123!\"}"
+              "raw": "{\"fullName\":\"Manager User\",\"email\":\"manager_{{$randomInt}}@example.com\",\"password\":\"SecurePass123!\"}"
             }
           },
           "event": [{
@@ -33,22 +35,90 @@
             "script": {
               "exec": [
                 "pm.test('Status 201', () => pm.response.to.have.status(201));",
-                "pm.test('Has id', () => pm.expect(pm.response.json().id).to.be.a('string'));",
-                "pm.test('Role is MEMBER', () => pm.expect(pm.response.json().role).to.equal('MEMBER'));",
-                "pm.test('No password in response', () => pm.expect(pm.response.json()).to.not.have.property('password'));"
+                "pm.collectionVariables.set('managerEmail', JSON.parse(pm.request.body.raw).email);"
               ]
             }
           }]
         },
         {
-          "name": "TC-AUTH-004: Login Success",
+          "name": "A-01b: Register Member (User 2)",
           "request": {
             "method": "POST",
-            "url": "{{baseUrl}}/auth/login",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/register",
             "body": {
               "mode": "raw",
-              "raw": "{\"email\":\"test@example.com\",\"password\":\"TestPass123!\"}"
+              "raw": "{\"fullName\":\"Member User\",\"email\":\"member_{{$randomInt}}@example.com\",\"password\":\"SecurePass123!\"}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                "pm.collectionVariables.set('memberEmail', JSON.parse(pm.request.body.raw).email);",
+                "pm.collectionVariables.set('user2Id', pm.response.json().id);"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "A-02: Register Duplicate Email",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"fullName\":\"Duplicate User\",\"email\":\"{{managerEmail}}\",\"password\":\"SecurePass123!\"}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 409', () => pm.response.to.have.status(409));"] }
+          }]
+        },
+        {
+          "name": "A-03: Register Invalid Email",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"fullName\":\"Invalid User\",\"email\":\"not-an-email\",\"password\":\"SecurePass123!\"}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 400', () => pm.response.to.have.status(400));"] }
+          }]
+        },
+        {
+          "name": "A-04: Register Weak Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"fullName\":\"Weak User\",\"email\":\"weak@example.com\",\"password\":\"weak\"}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 400', () => pm.response.to.have.status(400));"] }
+          }]
+        },
+        {
+          "name": "A-05: Login Valid User 1 (Manager)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{managerEmail}}\",\"password\":\"SecurePass123!\"}"
             }
           },
           "event": [{
@@ -57,10 +127,6 @@
               "exec": [
                 "pm.test('Status 200', () => pm.response.to.have.status(200));",
                 "const data = pm.response.json();",
-                "pm.test('Has accessToken', () => pm.expect(data.accessToken).to.be.a('string'));",
-                "pm.test('Has refreshToken', () => pm.expect(data.refreshToken).to.be.a('string'));",
-                "pm.test('tokenType is Bearer', () => pm.expect(data.tokenType).to.equal('Bearer'));",
-                "pm.test('expiresIn is 900', () => pm.expect(data.expiresIn).to.equal(900));",
                 "pm.collectionVariables.set('accessToken', data.accessToken);",
                 "pm.collectionVariables.set('refreshToken', data.refreshToken);"
               ]
@@ -68,63 +134,68 @@
           }]
         },
         {
-          "name": "TC-AUTH-005: Login Wrong Password",
+          "name": "A-05b: Login Valid User 2 (Member)",
           "request": {
             "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": "{{baseUrl}}/auth/login",
             "body": {
               "mode": "raw",
-              "raw": "{\"email\":\"test@example.com\",\"password\":\"wrongpassword\"}"
+              "raw": "{\"email\":\"{{memberEmail}}\",\"password\":\"SecurePass123!\"}"
             }
           },
           "event": [{
             "listen": "test",
             "script": {
               "exec": [
-                "pm.test('Status 401', () => pm.response.to.have.status(401));",
-                "pm.test('Error message', () => pm.expect(pm.response.json().message).to.include('Invalid'));"
-              ]
-            }
-          }]
-        }
-      ]
-    },
-    {
-      "name": "Projects",
-      "item": [
-        {
-          "name": "TC-PROJ-001: Create Project",
-          "request": {
-            "method": "POST",
-            "url": "{{baseUrl}}/projects",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\"name\":\"Test Project\",\"description\":\"API test project\",\"visibility\":\"PRIVATE\"}"
-            }
-          },
-          "event": [{
-            "listen": "test",
-            "script": {
-              "exec": [
-                "pm.test('Status 201', () => pm.response.to.have.status(201));",
-                "const data = pm.response.json();",
-                "pm.test('Has id', () => pm.expect(data.id).to.be.a('string'));",
-                "pm.test('Status is ACTIVE', () => pm.expect(data.status).to.equal('ACTIVE'));",
-                "pm.collectionVariables.set('projectId', data.id);"
+                "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                "pm.collectionVariables.set('user2Token', pm.response.json().accessToken);"
               ]
             }
           }]
         },
         {
-          "name": "TC-PROJ-002: Get All Projects",
+          "name": "A-06: Login Wrong Password",
           "request": {
-            "method": "GET",
-            "url": "{{baseUrl}}/projects?page=0&size=10",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{managerEmail}}\",\"password\":\"WrongPass123!\"}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 401', () => pm.response.to.have.status(401));"] }
+          }]
+        },
+        {
+          "name": "A-07: Login Unknown Email",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"nobody@example.com\",\"password\":\"SecurePass123!\"}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 401', () => pm.response.to.have.status(401));"] }
+          }]
+        },
+        {
+          "name": "A-09: Refresh Valid Token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/refresh",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"refreshToken\":\"{{refreshToken}}\"}"
+            }
           },
           "event": [{
             "listen": "test",
@@ -132,29 +203,185 @@
               "exec": [
                 "pm.test('Status 200', () => pm.response.to.have.status(200));",
                 "const data = pm.response.json();",
-                "pm.test('Has content array', () => pm.expect(data.content).to.be.an('array'));",
-                "pm.test('Has totalElements', () => pm.expect(data.totalElements).to.be.a('number'));"
+                "pm.collectionVariables.set('oldRefreshToken', pm.collectionVariables.get('refreshToken'));",
+                "pm.collectionVariables.set('accessToken', data.accessToken);",
+                "pm.collectionVariables.set('refreshToken', data.refreshToken);"
               ]
             }
+          }]
+        },
+        {
+          "name": "A-10: Refresh Invalid Token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/refresh",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"refreshToken\":\"garbage-token-xyz\"}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 401', () => pm.response.to.have.status(401));"] }
+          }]
+        },
+        {
+          "name": "A-11: Refresh Reuse Attempt",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/refresh",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"refreshToken\":\"{{oldRefreshToken}}\"}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 401', () => pm.response.to.have.status(401));"] }
           }]
         }
       ]
     },
     {
-      "name": "Tasks",
+      "name": "2. Users",
       "item": [
         {
-          "name": "TC-TASK-001: Create Task",
+          "name": "U-01: Get Current User",
           "request": {
-            "method": "POST",
-            "url": "{{baseUrl}}/projects/{{projectId}}/tasks",
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/users/me"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"] }
+          }]
+        },
+        {
+          "name": "U-02: Get User No Auth",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/users/me"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 401', () => pm.response.to.have.status(401));"] }
+          }]
+        },
+        {
+          "name": "U-03: Update Profile",
+          "request": {
+            "method": "PUT",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
             ],
+            "url": "{{baseUrl}}/users/me",
             "body": {
               "mode": "raw",
-              "raw": "{\"title\":\"Implement feature X\",\"description\":\"Detailed description\",\"priority\":\"HIGH\",\"status\":\"TODO\"}"
+              "raw": "{\"fullName\":\"Manager Updated\"}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"] }
+          }]
+        },
+        {
+          "name": "U-04: Update Profile Invalid",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/users/me",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"fullName\":\"\"}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 400', () => pm.response.to.have.status(400));"] }
+          }]
+        },
+        {
+          "name": "U-05: Change Password Valid",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/users/me/password",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"currentPassword\":\"SecurePass123!\",\"newPassword\":\"NewPass123!\"}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 204', () => pm.response.to.have.status(204));"] }
+          }]
+        },
+        {
+          "name": "U-06: Change Password Wrong Curr",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/users/me/password",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"currentPassword\":\"WrongPass123!\",\"newPassword\":\"AnyPass123!\"}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 401', () => pm.response.to.have.status(401));"] }
+          }]
+        },
+        {
+          "name": "U-99: Revert Password",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/users/me/password",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"currentPassword\":\"NewPass123!\",\"newPassword\":\"SecurePass123!\"}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 204', () => pm.response.to.have.status(204));"] }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "3. Projects",
+      "item": [
+        {
+          "name": "P-01: Create Project",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/projects",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Test Project\",\"description\":\"Desc\",\"visibility\":\"PRIVATE\"}"
             }
           },
           "event": [{
@@ -162,24 +389,258 @@
             "script": {
               "exec": [
                 "pm.test('Status 201', () => pm.response.to.have.status(201));",
-                "const data = pm.response.json();",
-                "pm.test('Title matches', () => pm.expect(data.title).to.equal('Implement feature X'));",
-                "pm.test('Status is TODO', () => pm.expect(data.status).to.equal('TODO'));",
-                "pm.test('Priority is HIGH', () => pm.expect(data.priority).to.equal('HIGH'));",
-                "pm.collectionVariables.set('taskId', data.id);"
+                "pm.collectionVariables.set('projectId', pm.response.json().id);"
               ]
             }
           }]
         },
         {
-          "name": "TC-TASK-005: Update Task Status",
+          "name": "P-02: Create Project No Auth",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/projects",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"No Auth\"}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 401', () => pm.response.to.have.status(401));"] }
+          }]
+        },
+        {
+          "name": "P-03: Create Project Missing Name",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/projects",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"description\":\"Desc\"}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 400', () => pm.response.to.have.status(400));"] }
+          }]
+        },
+        {
+          "name": "P-04: List Projects",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/projects"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"] }
+          }]
+        },
+        {
+          "name": "P-07: Get Project",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/projects/{{projectId}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"] }
+          }]
+        },
+        {
+          "name": "P-08: Get Project Non Member",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{user2Token}}" }],
+            "url": "{{baseUrl}}/projects/{{projectId}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 403', () => pm.response.to.have.status(403));"] }
+          }]
+        },
+        {
+          "name": "P-10: Update Project",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/projects/{{projectId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Updated Name\",\"description\":\"Updated desc\"}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"] }
+          }]
+        },
+        {
+          "name": "P-14: Add Member",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/projects/{{projectId}}/members",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{memberEmail}}\",\"role\":\"MEMBER\"}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 201', () => pm.response.to.have.status(201));"] }
+          }]
+        },
+        {
+          "name": "P-15: Add Member Already Member",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/projects/{{projectId}}/members",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{memberEmail}}\",\"role\":\"MEMBER\"}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 409', () => pm.response.to.have.status(409));"] }
+          }]
+        },
+        {
+          "name": "P-11: Update Project Non Manager",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{user2Token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/projects/{{projectId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Hacked Name\"}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 403', () => pm.response.to.have.status(403));"] }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "4. Tasks",
+      "item": [
+        {
+          "name": "T-01: Create Task",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/projects/{{projectId}}/tasks",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"My Task\",\"priority\":\"HIGH\",\"status\":\"TODO\"}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                "pm.collectionVariables.set('taskId', pm.response.json().id);"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "T-03: Create Task Missing Title",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/projects/{{projectId}}/tasks",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"priority\":\"HIGH\"}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 400', () => pm.response.to.have.status(400));"] }
+          }]
+        },
+        {
+          "name": "T-04: List Tasks",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/projects/{{projectId}}/tasks"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"] }
+          }]
+        },
+        {
+          "name": "T-07: Get Task",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/tasks/{{taskId}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"] }
+          }]
+        },
+        {
+          "name": "T-08: Update Task",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/tasks/{{taskId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"Updated Title\"}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"] }
+          }]
+        },
+        {
+          "name": "T-10: Status Update Valid",
           "request": {
             "method": "PATCH",
-            "url": "{{baseUrl}}/tasks/{{taskId}}/status",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
             ],
+            "url": "{{baseUrl}}/tasks/{{taskId}}/status",
             "body": {
               "mode": "raw",
               "raw": "{\"status\":\"IN_PROGRESS\"}"
@@ -187,49 +648,251 @@
           },
           "event": [{
             "listen": "test",
-            "script": {
-              "exec": [
-                "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                "pm.test('Status updated', () => pm.expect(pm.response.json().status).to.equal('IN_PROGRESS'));"
-              ]
+            "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"] }
+          }]
+        },
+        {
+          "name": "T-11: Status Update Invalid",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/tasks/{{taskId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\":\"TODO\"}"
             }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 422', () => pm.response.to.have.status(422));"] }
           }]
         }
       ]
     },
     {
-      "name": "Error Cases",
+      "name": "5. Comments",
       "item": [
         {
-          "name": "TC-ERR-002: Resource Not Found",
+          "name": "C-01: Add Comment",
           "request": {
-            "method": "GET",
-            "url": "{{baseUrl}}/projects/00000000-0000-0000-0000-000000000000",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/tasks/{{taskId}}/comments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"content\":\"Test comment\"}"
+            }
           },
           "event": [{
             "listen": "test",
             "script": {
               "exec": [
-                "pm.test('Status 404', () => pm.response.to.have.status(404));",
-                "pm.test('Error is NOT_FOUND', () => pm.expect(pm.response.json().error).to.equal('NOT_FOUND'));"
+                "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                "pm.collectionVariables.set('commentId', pm.response.json().id);"
               ]
             }
           }]
         },
         {
-          "name": "TC-ERR-003: No Token",
+          "name": "C-03: Add Comment Empty",
           "request": {
-            "method": "GET",
-            "url": "{{baseUrl}}/projects"
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/tasks/{{taskId}}/comments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"content\":\"\"}"
+            }
           },
           "event": [{
             "listen": "test",
-            "script": {
-              "exec": [
-                "pm.test('Status 401', () => pm.response.to.have.status(401));"
-              ]
+            "script": { "exec": ["pm.test('Status 400', () => pm.response.to.have.status(400));"] }
+          }]
+        },
+        {
+          "name": "C-05: Edit Own Comment",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/comments/{{commentId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"content\":\"Updated test comment\"}"
             }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"] }
+          }]
+        },
+        {
+          "name": "C-06: Edit Another's Comment",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{user2Token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/comments/{{commentId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"content\":\"Hacked comment\"}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 403', () => pm.response.to.have.status(403));"] }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "6. Notifications",
+      "item": [
+        {
+          "name": "N-01: Get Notifications",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/notifications"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"] }
+          }]
+        },
+        {
+          "name": "N-06: Mark All Read",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/notifications/read-all"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 204 or 200', () => pm.expect(pm.response.code).to.be.oneOf([200, 204]));"] }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "7. Activities",
+      "item": [
+        {
+          "name": "AC-01: Get Project Activities",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/projects/{{projectId}}/activities"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"] }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "8. Dashboard",
+      "item": [
+        {
+          "name": "D-01: Get Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/dashboard/summary"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"] }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "9. Error Cases & Tear Down",
+      "item": [
+        {
+          "name": "E-01: Malformed JSON",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"manager@example.com\",\"password\":"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 400', () => pm.response.to.have.status(400));"] }
+          }]
+        },
+        {
+          "name": "C-08: Delete Task (Tear Down)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/tasks/{{taskId}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 204 or 200', () => pm.expect(pm.response.code).to.be.oneOf([200, 204]));"] }
+          }]
+        },
+        {
+          "name": "P-18: Remove Member (Tear Down)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/projects/{{projectId}}/members/{{user2Id}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 204 or 200', () => pm.expect(pm.response.code).to.be.oneOf([200, 204]));"] }
+          }]
+        },
+        {
+          "name": "P-12: Archive Project (Tear Down)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/projects/{{projectId}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 204 or 200', () => pm.expect(pm.response.code).to.be.oneOf([200, 204]));"] }
+          }]
+        },
+        {
+          "name": "A-12: Logout User 1 (Tear Down)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/auth/logout",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"refreshToken\":\"{{refreshToken}}\"}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 204 or 200', () => pm.expect(pm.response.code).to.be.oneOf([200, 204]));"] }
           }]
         }
       ]

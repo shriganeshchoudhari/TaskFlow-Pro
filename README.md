@@ -2,7 +2,7 @@
 
 > Enterprise-grade Collaborative Task Management Platform
 
-[![CI/CD](https://github.com/your-org/taskflow-pro/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/your-org/taskflow-pro/actions)
+[![CI/CD](https://github.com/your-org/taskflow-pro/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/shriganeshchoudhari/TaskFlow-Pro/actions)
 [![Coverage](https://codecov.io/gh/your-org/taskflow-pro/branch/main/graph/badge.svg)](https://codecov.io/gh/your-org/taskflow-pro)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
