@@ -2,7 +2,9 @@ package com.taskflow;
 
 import com.taskflow.dto.request.CreateTaskRequest;
 import com.taskflow.dto.request.UpdateTaskRequest;
+import com.taskflow.dto.request.CreateSubtaskRequest;
 import com.taskflow.dto.response.TaskResponse;
+import com.taskflow.dto.response.SubtaskResponse;
 import com.taskflow.exception.*;
 import com.taskflow.model.*;
 import com.taskflow.repository.*;
@@ -35,6 +37,8 @@ class TaskServiceTest {
     @Mock private ProjectMemberRepository projectMemberRepository;
     @Mock private NotificationService notificationService;
     @Mock private ActivityService activityService;
+    @Mock private org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
+    @Mock private SubtaskRepository subtaskRepository;
 
     @InjectMocks private TaskService taskService;
 
@@ -64,7 +68,7 @@ class TaskServiceTest {
             .project(project).reporter(reporter).assignee(assignee).build();
 
         reporterDetails = mock(UserDetails.class);
-        when(reporterDetails.getUsername()).thenReturn(reporter.getEmail());
+        lenient().when(reporterDetails.getUsername()).thenReturn(reporter.getEmail());
 
         assigneeDetails = mock(UserDetails.class);
         lenient().when(assigneeDetails.getUsername()).thenReturn(assignee.getEmail());
@@ -256,9 +260,9 @@ class TaskServiceTest {
         ProjectMember pm = ProjectMember.builder()
             .role(User.Role.MANAGER).build();
 
-        when(taskRepository.findById(task.getId())).thenReturn(Optional.of(task));
-        when(userRepository.findByEmail(manager.getEmail())).thenReturn(Optional.of(manager));
-        when(projectMemberRepository.findByProjectIdAndUserId(project.getId(), manager.getId()))
+        lenient().when(taskRepository.findById(task.getId())).thenReturn(Optional.of(task));
+        lenient().when(userRepository.findByEmail(manager.getEmail())).thenReturn(Optional.of(manager));
+        lenient().when(projectMemberRepository.findByProjectIdAndUserId(project.getId(), manager.getId()))
             .thenReturn(Optional.of(pm));
 
         taskService.deleteTask(task.getId(), mgrDetails);
@@ -272,12 +276,66 @@ class TaskServiceTest {
         ProjectMember pm = ProjectMember.builder()
             .role(User.Role.MEMBER).build();
 
-        when(taskRepository.findById(task.getId())).thenReturn(Optional.of(task));
-        when(userRepository.findByEmail(reporter.getEmail())).thenReturn(Optional.of(reporter));
-        when(projectMemberRepository.findByProjectIdAndUserId(project.getId(), reporter.getId()))
+        lenient().when(taskRepository.findById(task.getId())).thenReturn(Optional.of(task));
+        lenient().when(userRepository.findByEmail(reporter.getEmail())).thenReturn(Optional.of(reporter));
+        lenient().when(projectMemberRepository.findByProjectIdAndUserId(project.getId(), reporter.getId()))
             .thenReturn(Optional.of(pm));
 
         assertThatThrownBy(() -> taskService.deleteTask(task.getId(), reporterDetails))
             .isInstanceOf(ForbiddenException.class);
+    }
+
+    // ── Subtasks & Time Tracking ─────────────────────────────────────────────
+
+    @Test
+    @DisplayName("addSubtask: valid request succeeds")
+    void addSubtask_ValidRequest_Succeeds() {
+        CreateSubtaskRequest req = new CreateSubtaskRequest();
+        req.setTitle("Checklist Item 1");
+
+        when(taskRepository.findById(task.getId())).thenReturn(Optional.of(task));
+        when(userRepository.findByEmail(reporter.getEmail())).thenReturn(Optional.of(reporter));
+        when(projectMemberRepository.existsByProjectIdAndUserId(project.getId(), reporter.getId())).thenReturn(true);
+        
+        when(subtaskRepository.save(any(Subtask.class))).thenAnswer(inv -> {
+            Subtask s = inv.getArgument(0);
+            s.setId(UUID.randomUUID());
+            return s;
+        });
+
+        SubtaskResponse response = taskService.addSubtask(task.getId(), req, reporterDetails);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getTitle()).isEqualTo("Checklist Item 1");
+    }
+
+    @Test
+    @DisplayName("toggleSubtask: flips completion status")
+    void toggleSubtask_Succeeds() {
+        Subtask subtask = Subtask.builder().id(UUID.randomUUID()).title("Subtask").isCompleted(false).task(task).build();
+        
+        when(subtaskRepository.findById(subtask.getId())).thenReturn(Optional.of(subtask));
+        when(userRepository.findByEmail(reporter.getEmail())).thenReturn(Optional.of(reporter));
+        when(projectMemberRepository.existsByProjectIdAndUserId(project.getId(), reporter.getId())).thenReturn(true);
+        
+        when(subtaskRepository.save(any(Subtask.class))).thenReturn(subtask); // isCompleted will be true
+
+        SubtaskResponse response = taskService.toggleSubtask(subtask.getId(), reporterDetails);
+
+        assertThat(response.getIsCompleted()).isTrue();
+    }
+
+    @Test
+    @DisplayName("logTime: adds to logged hours")
+    void logTime_Succeeds() {
+        task.setLoggedHours(2.5);
+        when(taskRepository.findById(task.getId())).thenReturn(Optional.of(task));
+        when(userRepository.findByEmail(reporter.getEmail())).thenReturn(Optional.of(reporter));
+        when(projectMemberRepository.existsByProjectIdAndUserId(project.getId(), reporter.getId())).thenReturn(true);
+        when(taskRepository.save(any(Task.class))).thenReturn(task);
+
+        TaskResponse response = taskService.logTime(task.getId(), 1.5, reporterDetails);
+
+        assertThat(response.getLoggedHours()).isEqualTo(4.0);
     }
 }

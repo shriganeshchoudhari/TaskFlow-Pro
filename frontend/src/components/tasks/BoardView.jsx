@@ -1,8 +1,10 @@
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { useEffect } from 'react';
 import { Box, Typography, Divider, Button, Skeleton } from '@mui/material';
 import { Add } from '@mui/icons-material';
 import TaskCard from './TaskCard';
-import { selectTasksByStatus, selectTasksLoading } from '../../store/slices/tasksSlice';
+import { selectTasksByStatus, selectTasksLoading, fetchProjectTasks } from '../../store/slices/tasksSlice';
+import useWebSocket from '../../hooks/useWebSocket';
 
 const COLUMNS = [
   { key: 'TODO',        label: 'To Do',       color: '#9e9e9e' },
@@ -91,6 +93,25 @@ function Column({ column, onAddTask }) {
 }
 
 export default function BoardView({ projectId, onAddTask }) {
+  const dispatch = useDispatch();
+  const { isConnected, subscribe } = useWebSocket();
+
+  useEffect(() => {
+    if (isConnected && projectId) {
+      const subscription = subscribe(`/topic/project/${projectId}/tasks`, (payload) => {
+        // Payload contains { action, task } or { action, taskId }
+        // For simplicity and to guarantee accurate ordered state across all columns,
+        // we'll just trigger a re-fetch of the project's tasks when any WS event occurs.
+        // In a highly optimized app, you would dispatch individual Redux actions (addTask, updateTask, deleteTask).
+        dispatch(fetchProjectTasks({ projectId }));
+      });
+
+      return () => {
+        if (subscription) subscription.unsubscribe();
+      };
+    }
+  }, [isConnected, subscribe, projectId, dispatch]);
+
   return (
     <Box
       sx={{

@@ -147,6 +147,8 @@ CREATE TABLE tasks (
     reporter_id   UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
     position      INTEGER NOT NULL DEFAULT 0,    -- For ordering within status column
     tags          TEXT[],                        -- PostgreSQL array for simple tags
+    estimated_hours NUMERIC(5,2),
+    logged_hours    NUMERIC(5,2) DEFAULT 0.0,
     created_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
@@ -209,7 +211,35 @@ COMMENT ON COLUMN activities.action IS
 COMMENT ON COLUMN activities.entity_type IS 'TASK, PROJECT, COMMENT';
 ```
 
-### 2.8 refresh_tokens
+### 2.8 subtasks
+
+```sql
+CREATE TABLE subtasks (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    task_id       UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    title         VARCHAR(500) NOT NULL,
+    is_completed  BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+```
+
+### 2.9 attachments
+
+```sql
+CREATE TABLE attachments (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    task_id       UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    uploader_id   UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    file_name     VARCHAR(500) NOT NULL,
+    file_type     VARCHAR(100) NOT NULL,
+    storage_path  TEXT NOT NULL,
+    file_size     BIGINT NOT NULL,
+    created_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+```
+
+### 2.10 refresh_tokens
 
 ```sql
 CREATE TABLE refresh_tokens (

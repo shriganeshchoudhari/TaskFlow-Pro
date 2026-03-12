@@ -64,7 +64,7 @@ class CommentServiceTest {
             .task(task).author(author).build();
 
         authorDetails = mock(UserDetails.class);
-        when(authorDetails.getUsername()).thenReturn(author.getEmail());
+        lenient().when(authorDetails.getUsername()).thenReturn(author.getEmail());
         otherDetails = mock(UserDetails.class);
         lenient().when(otherDetails.getUsername()).thenReturn(otherUser.getEmail());
         managerDetails = mock(UserDetails.class);
@@ -94,9 +94,9 @@ class CommentServiceTest {
         CreateCommentRequest req = new CreateCommentRequest();
         req.setContent("Hack");
 
-        when(taskRepository.findById(task.getId())).thenReturn(Optional.of(task));
-        when(userRepository.findByEmail(otherUser.getEmail())).thenReturn(Optional.of(otherUser));
-        when(projectMemberRepository.existsByProjectIdAndUserId(project.getId(), otherUser.getId()))
+        lenient().when(taskRepository.findById(task.getId())).thenReturn(Optional.of(task));
+        lenient().when(userRepository.findByEmail(otherUser.getEmail())).thenReturn(Optional.of(otherUser));
+        lenient().when(projectMemberRepository.existsByProjectIdAndUserId(project.getId(), otherUser.getId()))
             .thenReturn(false);
 
         assertThatThrownBy(() -> commentService.addComment(task.getId(), req, otherDetails))
@@ -123,8 +123,8 @@ class CommentServiceTest {
         CreateCommentRequest req = new CreateCommentRequest();
         req.setContent("Hacked");
 
-        when(commentRepository.findById(comment.getId())).thenReturn(Optional.of(comment));
-        when(userRepository.findByEmail(otherUser.getEmail())).thenReturn(Optional.of(otherUser));
+        lenient().when(commentRepository.findById(comment.getId())).thenReturn(Optional.of(comment));
+        lenient().when(userRepository.findByEmail(otherUser.getEmail())).thenReturn(Optional.of(otherUser));
 
         assertThatThrownBy(() -> commentService.editComment(comment.getId(), req, otherDetails))
             .isInstanceOf(ForbiddenException.class);
@@ -157,9 +157,9 @@ class CommentServiceTest {
     @Test
     @DisplayName("deleteComment: by stranger throws ForbiddenException")
     void deleteComment_ByStranger_ThrowsForbidden() {
-        when(commentRepository.findById(comment.getId())).thenReturn(Optional.of(comment));
-        when(userRepository.findByEmail(otherUser.getEmail())).thenReturn(Optional.of(otherUser));
-        when(projectMemberRepository.findByProjectIdAndUserId(project.getId(), otherUser.getId()))
+        lenient().when(commentRepository.findById(comment.getId())).thenReturn(Optional.of(comment));
+        lenient().when(userRepository.findByEmail(otherUser.getEmail())).thenReturn(Optional.of(otherUser));
+        lenient().when(projectMemberRepository.findByProjectIdAndUserId(project.getId(), otherUser.getId()))
             .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> commentService.deleteComment(comment.getId(), otherDetails))

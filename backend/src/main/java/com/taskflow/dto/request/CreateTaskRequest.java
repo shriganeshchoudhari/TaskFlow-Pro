@@ -24,4 +24,7 @@ public class CreateTaskRequest {
     private LocalDate dueDate;
     private UUID assigneeId;
     private List<String> tags;
+    
+    @Min(value = 0, message = "Estimated hours must be positive")
+    private Integer estimatedHours;
 }

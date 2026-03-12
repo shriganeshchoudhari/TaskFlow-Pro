@@ -17,13 +17,13 @@ import java.util.UUID;
 @Slf4j
 public class JwtTokenProvider {
 
-    @Value("${jwt.secret}")
+    @Value("${app.jwt.secret}")
     private String secret;
 
-    @Value("${jwt.access-token-expiry-ms}")
+    @Value("${app.jwt.access-token-expiry-ms}")
     private long accessTokenExpiryMs;
 
-    @Value("${jwt.refresh-token-expiry-ms}")
+    @Value("${app.jwt.refresh-token-expiry-ms}")
     private long refreshTokenExpiryMs;
 
     private SecretKey getSigningKey() {

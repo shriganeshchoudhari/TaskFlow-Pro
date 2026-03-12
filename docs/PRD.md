@@ -196,6 +196,22 @@
 | **Assumption** | Peak concurrent users: 500 in MVP, 5,000 by year 2 |
 | **Assumption** | GDPR compliance is required (EU users in scope) |
 
+### 7.1 High-Level Architecture
+
+```mermaid
+graph TD
+    Client[Web Client (React)] -->|HTTPS/JWT| ALB[AWS ALB]
+    ALB -->|Traffic| K8s[EKS Cluster]
+    
+    subgraph K8s
+        API[Spring Boot API] 
+        API -->|Read/Write| DB[(RDS PostgreSQL)]
+    end
+    
+    API -->|Logs| CW[CloudWatch]
+    Client -.->|Static Assets| CDN[CloudFront/S3]
+```
+
 ---
 
 ## 8. Roadmap

@@ -504,6 +504,129 @@ Soft-deletes (archives) the project.
 
 ---
 
+### POST /tasks/{taskId}/subtasks
+
+🔒 *Requires project membership*
+
+Adds a new subtask (checklist item) to the task.
+
+**Request:**
+```json
+{
+  "title": "Draft design document"
+}
+```
+
+**Response 201:**
+```json
+{
+  "id": "subtask-uuid",
+  "title": "Draft design document",
+  "isCompleted": false,
+  "createdAt": "2025-01-14T10:00:00Z"
+}
+```
+
+---
+
+### PATCH /subtasks/{subtaskId}/toggle
+
+🔒 *Requires project membership*
+
+Toggles the completion status of a subtask.
+
+**Response 200:**
+```json
+{
+  "id": "subtask-uuid",
+  "title": "Draft design document",
+  "isCompleted": true,
+  "createdAt": "2025-01-14T10:00:00Z"
+}
+```
+
+---
+
+### DELETE /subtasks/{subtaskId}
+
+🔒 *Requires project membership*
+
+Deletes a subtask.
+
+**Response 204:** No content
+
+---
+
+### POST /tasks/{taskId}/time
+
+🔒 *Requires project membership*
+
+Logs time spent on a task.
+
+**Request:**
+```json
+{
+  "hours": 2.5
+}
+```
+
+**Response 200:** Updated task object with new `loggedHours`.
+
+---
+
+### POST /tasks/{taskId}/attachments
+
+🔒 *Requires project membership*
+
+Uploads a file attachment to the task. (Multipart request)
+
+**Request:** 
+`multipart/form-data` with `file` part.
+
+**Response 201:**
+```json
+{
+  "id": "attachment-uuid",
+  "fileName": "document.pdf",
+  "fileType": "application/pdf",
+  "fileSize": 1048576,
+  "storageUrl": "/uploads/document.pdf",
+  "createdAt": "2025-01-14T10:00:00Z"
+}
+```
+
+---
+
+### GET /tasks/{taskId}/attachments
+
+🔒 *Requires project membership*
+
+Returns all attachments for a task.
+
+**Response 200:** List of attachment objects.
+
+---
+
+### GET /attachments/{attachmentId}/download
+
+🔒 *Requires project membership*
+
+Downloads the actual file content.
+
+**Response 200:** File stream with appropriate `Content-Type` and `Content-Disposition`.
+
+---
+
+### DELETE /attachments/{attachmentId}
+
+🔒 *Requires attachment uploader, project MANAGER, or ADMIN*
+
+Deletes an attachment from the task.
+
+**Response 204:** No content
+
+---
+
 ## 6. Comment Endpoints
 
 ### GET /tasks/{taskId}/comments

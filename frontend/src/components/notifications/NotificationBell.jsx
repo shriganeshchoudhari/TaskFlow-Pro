@@ -11,6 +11,7 @@ import {
   fetchNotifications, markNotificationRead, markAllNotificationsRead,
   selectNotifications, selectUnreadCount, selectNotificationsLoading
 } from '../../store/slices/notificationsSlice';
+import useWebSocket from '../../hooks/useWebSocket';
 
 export default function NotificationBell() {
   const dispatch  = useDispatch();
@@ -19,16 +20,29 @@ export default function NotificationBell() {
   const unreadCount   = useSelector(selectUnreadCount);
   const loading       = useSelector(selectNotificationsLoading);
   const [anchorEl, setAnchorEl] = useState(null);
-  const pollRef = useRef(null);
+  
+  const { isConnected, subscribe } = useWebSocket();
 
   const load = () => dispatch(fetchNotifications({}));
 
   useEffect(() => {
     load();
-    // Poll every 60 seconds
-    pollRef.current = setInterval(load, 60000);
-    return () => clearInterval(pollRef.current);
   }, []);
+
+  useEffect(() => {
+    if (isConnected) {
+      const subscription = subscribe('/user/queue/notifications', (notification) => {
+        // When a real-time notification arrives, we can append it directly to the 
+        // redux store, or simply trigger a fresh fetch to ensure order is correct.
+        // Doing a quick refresh is safest.
+        load();
+      });
+
+      return () => {
+        if (subscription) subscription.unsubscribe();
+      };
+    }
+  }, [isConnected, subscribe]);
 
   const handleOpen = (e) => {
     setAnchorEl(e.currentTarget);

@@ -1,8 +1,8 @@
 # TaskFlow Pro — Security & Compliance
 
-**Version:** 1.0.0  
+**Version:** 1.0.1  
 **Framework:** OWASP Top 10 (2021), GDPR  
-**Reviewed:** 2025-01-01
+**Reviewed:** 2026-03-12
 
 ---
 

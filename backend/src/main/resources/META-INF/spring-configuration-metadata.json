@@ -1,0 +1,71 @@
+{
+  "groups": [
+    {
+      "name": "app.jwt",
+      "type": "java.lang.Object",
+      "description": "JWT Configuration"
+    },
+    {
+      "name": "app.cors",
+      "type": "java.lang.Object",
+      "description": "CORS Configuration"
+    },
+    {
+      "name": "springdoc.info",
+      "type": "java.lang.Object",
+      "description": "SpringDoc OpenAPI Info Configuration"
+    }
+  ],
+  "properties": [
+    {
+      "name": "app.jwt.secret",
+      "type": "java.lang.String",
+      "description": "Secret key for JWT generation."
+    },
+    {
+      "name": "app.jwt.access-token-expiry-ms",
+      "type": "java.lang.Long",
+      "description": "Access token expiration in milliseconds."
+    },
+    {
+      "name": "app.jwt.refresh-token-expiry-ms",
+      "type": "java.lang.Long",
+      "description": "Refresh token expiration in milliseconds."
+    },
+    {
+      "name": "app.cors.allowed-origins",
+      "type": "java.lang.String",
+      "description": "Comma-separated list of allowed CORS origins."
+    },
+    {
+      "name": "app.cors.allowed-methods",
+      "type": "java.lang.String",
+      "description": "Comma-separated list of allowed CORS methods."
+    },
+    {
+      "name": "app.cors.allowed-headers",
+      "type": "java.lang.String",
+      "description": "Allowed CORS headers."
+    },
+    {
+      "name": "app.cors.max-age",
+      "type": "java.lang.Long",
+      "description": "CORS max age."
+    },
+    {
+      "name": "springdoc.info.title",
+      "type": "java.lang.String",
+      "description": "OpenAPI documentation title."
+    },
+    {
+      "name": "springdoc.info.version",
+      "type": "java.lang.String",
+      "description": "OpenAPI documentation version."
+    },
+    {
+      "name": "springdoc.info.description",
+      "type": "java.lang.String",
+      "description": "OpenAPI documentation description."
+    }
+  ]
+}

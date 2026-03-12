@@ -24,6 +24,7 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final TaskRepository taskRepository;
+    private final org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
 
     // ── Create Notifications ──────────────────────────────────────────────────
 
@@ -79,7 +80,19 @@ public class NotificationService {
             .task(task)
             .project(project)
             .build();
-        notificationRepository.save(n);
+        Notification saved = notificationRepository.save(n);
+        
+        // Push notification in real-time
+        try {
+            messagingTemplate.convertAndSendToUser(
+                user.getEmail(), 
+                "/queue/notifications", 
+                NotificationResponse.fromEntity(saved)
+            );
+            log.debug("Sent WebSocket notification to {}", user.getEmail());
+        } catch (Exception e) {
+            log.warn("Failed to send WebSocket notification: {}", e.getMessage());
+        }
     }
 
     // ── Query ─────────────────────────────────────────────────────────────────

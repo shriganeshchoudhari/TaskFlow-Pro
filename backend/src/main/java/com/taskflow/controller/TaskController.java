@@ -3,7 +3,10 @@ package com.taskflow.controller;
 import com.taskflow.dto.request.CreateTaskRequest;
 import com.taskflow.dto.request.UpdateTaskRequest;
 import com.taskflow.dto.request.UpdateTaskStatusRequest;
+import com.taskflow.dto.request.CreateSubtaskRequest;
+import com.taskflow.dto.request.LogTimeRequest;
 import com.taskflow.dto.response.TaskResponse;
+import com.taskflow.dto.response.SubtaskResponse;
 import com.taskflow.service.TaskService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -95,5 +98,43 @@ public class TaskController {
             @AuthenticationPrincipal UserDetails currentUser) {
         taskService.deleteTask(taskId, currentUser);
         return ResponseEntity.noContent().build();
+    }
+
+    // ── Subtasks & Time Tracking ──────────────────────────────────────────────
+
+    @Operation(summary = "Add subtask", description = "Add a checklist item to a task")
+    @PostMapping("/api/v1/tasks/{taskId}/subtasks")
+    public ResponseEntity<SubtaskResponse> addSubtask(
+            @PathVariable UUID taskId,
+            @Valid @RequestBody CreateSubtaskRequest request,
+            @AuthenticationPrincipal UserDetails currentUser) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(taskService.addSubtask(taskId, request, currentUser));
+    }
+
+    @Operation(summary = "Toggle subtask", description = "Toggle checklist item completion")
+    @PatchMapping("/api/v1/subtasks/{subtaskId}/toggle")
+    public ResponseEntity<SubtaskResponse> toggleSubtask(
+            @PathVariable UUID subtaskId,
+            @AuthenticationPrincipal UserDetails currentUser) {
+        return ResponseEntity.ok(taskService.toggleSubtask(subtaskId, currentUser));
+    }
+
+    @Operation(summary = "Delete subtask", description = "Remove a checklist item")
+    @DeleteMapping("/api/v1/subtasks/{subtaskId}")
+    public ResponseEntity<Void> deleteSubtask(
+            @PathVariable UUID subtaskId,
+            @AuthenticationPrincipal UserDetails currentUser) {
+        taskService.deleteSubtask(subtaskId, currentUser);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Log time", description = "Add hours to the task's logged time")
+    @PostMapping("/api/v1/tasks/{taskId}/time")
+    public ResponseEntity<TaskResponse> logTime(
+            @PathVariable UUID taskId,
+            @Valid @RequestBody LogTimeRequest request,
+            @AuthenticationPrincipal UserDetails currentUser) {
+        return ResponseEntity.ok(taskService.logTime(taskId, request.getHours(), currentUser));
     }
 }

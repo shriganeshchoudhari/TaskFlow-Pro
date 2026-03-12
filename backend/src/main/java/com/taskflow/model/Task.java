@@ -57,6 +57,12 @@ public class Task {
     @JoinColumn(name = "reporter_id", nullable = false)
     private User reporter;
 
+    @Column(name = "estimated_hours")
+    private Integer estimatedHours;
+
+    @Column(name = "logged_hours")
+    private Double loggedHours;
+
     @Column(name = "position", nullable = false)
     @Builder.Default
     private Integer position = 0;
@@ -70,6 +76,10 @@ public class Task {
     @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<Comment> comments = new ArrayList<>();
+
+    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<Subtask> subtasks = new ArrayList<>();
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false,

@@ -243,4 +243,61 @@ class ProjectTaskControllerIT {
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.content").value("This is a test comment"));
     }
+
+    // ── Subtasks & Time Tracking Tests ───────────────────────────────────────
+
+    @Test
+    @DisplayName("addSubtask: to task returns 201")
+    void addSubtask_ToTask_Returns201() throws Exception {
+        // Create a task
+        MvcResult taskResult = mockMvc.perform(post("/api/v1/projects/" + projectId + "/tasks")
+                .header("Authorization", "Bearer " + accessToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title": "Task for Subtask"}
+                    """))
+            .andExpect(status().isCreated())
+            .andReturn();
+
+        String taskId = objectMapper.readTree(taskResult.getResponse().getContentAsString())
+            .get("id").asText();
+
+        // Add subtask
+        mockMvc.perform(post("/api/v1/tasks/" + taskId + "/subtasks")
+                .header("Authorization", "Bearer " + accessToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title": "New Checklist Item"}
+                    """))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.title").value("New Checklist Item"))
+            .andExpect(jsonPath("$.isCompleted").value(false));
+    }
+
+    @Test
+    @DisplayName("logTime: to task returns 200")
+    void logTime_ToTask_Returns200() throws Exception {
+        // Create a task
+        MvcResult taskResult = mockMvc.perform(post("/api/v1/projects/" + projectId + "/tasks")
+                .header("Authorization", "Bearer " + accessToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title": "Task for Time Logging"}
+                    """))
+            .andExpect(status().isCreated())
+            .andReturn();
+
+        String taskId = objectMapper.readTree(taskResult.getResponse().getContentAsString())
+            .get("id").asText();
+
+        // Log time
+        mockMvc.perform(post("/api/v1/tasks/" + taskId + "/time")
+                .header("Authorization", "Bearer " + accessToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"hours": 2.5}
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.loggedHours").value(2.5));
+    }
 }

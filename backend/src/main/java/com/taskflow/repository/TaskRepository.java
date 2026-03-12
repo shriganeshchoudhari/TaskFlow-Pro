@@ -45,7 +45,7 @@ public interface TaskRepository extends JpaRepository<Task, UUID> {
         SELECT t FROM Task t
         WHERE t.status != 'DONE'
           AND t.assignee IS NOT NULL
-          AND t.dueDate = CURRENT_DATE + 1
+          AND t.dueDate = CURRENT_DATE + 1 DAY
         """)
     List<Task> findTasksDueTomorrow();
 
@@ -53,7 +53,7 @@ public interface TaskRepository extends JpaRepository<Task, UUID> {
         SELECT COUNT(t) FROM Task t
         WHERE t.assignee.id = :userId
           AND t.status != 'DONE'
-          AND t.dueDate BETWEEN CURRENT_DATE AND CURRENT_DATE + 7
+          AND t.dueDate BETWEEN CURRENT_DATE AND CURRENT_DATE + 7 DAY
         """)
     long countDueThisWeekByUserId(@Param("userId") UUID userId);
 

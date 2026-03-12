@@ -22,6 +22,9 @@ public class TaskResponse {
     private String projectName;
     private List<String> tags;
     private int commentCount;
+    private Integer estimatedHours;
+    private Double loggedHours;
+    private List<SubtaskResponse> subtasks;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
 
@@ -40,6 +43,17 @@ public class TaskResponse {
             .projectName(task.getProject().getName())
             .tags(task.getTags() != null ? task.getTags() : List.of())
             .commentCount(task.getComments() != null ? task.getComments().size() : 0)
+            .estimatedHours(task.getEstimatedHours())
+            .loggedHours(task.getLoggedHours())
+            .subtasks(task.getSubtasks() != null ? task.getSubtasks().stream()
+                .map(s -> SubtaskResponse.builder()
+                    .id(s.getId())
+                    .title(s.getTitle())
+                    .isCompleted(s.getIsCompleted())
+                    .taskId(task.getId())
+                    .createdAt(s.getCreatedAt())
+                    .build())
+                .collect(java.util.stream.Collectors.toList()) : List.of())
             .createdAt(task.getCreatedAt())
             .updatedAt(task.getUpdatedAt())
             .build();

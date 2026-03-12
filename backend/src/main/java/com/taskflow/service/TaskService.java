@@ -2,7 +2,9 @@ package com.taskflow.service;
 
 import com.taskflow.dto.request.CreateTaskRequest;
 import com.taskflow.dto.request.UpdateTaskRequest;
+import com.taskflow.dto.request.CreateSubtaskRequest;
 import com.taskflow.dto.response.TaskResponse;
+import com.taskflow.dto.response.SubtaskResponse;
 import com.taskflow.exception.*;
 import com.taskflow.model.*;
 import com.taskflow.repository.*;
@@ -27,6 +29,8 @@ public class TaskService {
     private final ProjectMemberRepository projectMemberRepository;
     private final NotificationService notificationService;
     private final ActivityService activityService;
+    private final org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
+    private final SubtaskRepository subtaskRepository;
 
     // ── Queries ───────────────────────────────────────────────────────────────
 
@@ -87,6 +91,7 @@ public class TaskService {
             .project(project)
             .reporter(reporter)
             .assignee(assignee)
+            .estimatedHours(request.getEstimatedHours())
             .tags(request.getTags() != null ? request.getTags() : new java.util.ArrayList<>())
             .build();
 
@@ -100,7 +105,9 @@ public class TaskService {
         }
 
         log.info("Task created: {} in project: {}", saved.getId(), projectId);
-        return TaskResponse.fromEntity(saved);
+        TaskResponse response = TaskResponse.fromEntity(saved);
+        broadcastTaskUpdate(projectId, response, "TASK_CREATED");
+        return response;
     }
 
     @Transactional
@@ -116,6 +123,7 @@ public class TaskService {
             task.setPriority(Task.TaskPriority.valueOf(request.getPriority()));
         if (request.getDueDate() != null)     task.setDueDate(request.getDueDate());
         if (request.getTags() != null)        task.setTags(request.getTags());
+        if (request.getEstimatedHours() != null) task.setEstimatedHours(request.getEstimatedHours());
 
         if (request.getAssigneeId() != null) {
             User newAssignee = userRepository.findById(request.getAssigneeId())
@@ -127,7 +135,10 @@ public class TaskService {
         Task saved = taskRepository.save(task);
         activityService.logActivity("TASK_UPDATED", "TASK", saved.getId(),
             user, task.getProject(), saved, null, null);
-        return TaskResponse.fromEntity(saved);
+        
+        TaskResponse response = TaskResponse.fromEntity(saved);
+        broadcastTaskUpdate(task.getProject().getId(), response, "TASK_UPDATED");
+        return response;
     }
 
     @Transactional
@@ -153,7 +164,9 @@ public class TaskService {
 
         notificationService.notifyStatusChanged(saved, user, oldStatusName, newStatus);
 
-        return TaskResponse.fromEntity(saved);
+        TaskResponse response = TaskResponse.fromEntity(saved);
+        broadcastTaskUpdate(task.getProject().getId(), response, "TASK_STATUS_CHANGED");
+        return response;
     }
 
     @Transactional
@@ -161,8 +174,100 @@ public class TaskService {
         Task task = findTaskOrThrow(taskId);
         User user = resolveUser(currentUser);
         assertCanDeleteTask(task, user);
+        
+        UUID projectId = task.getProject().getId();
         taskRepository.delete(task);
         log.info("Task deleted: {} by user: {}", taskId, user.getEmail());
+        
+        try {
+            messagingTemplate.convertAndSend(
+                "/topic/project/" + projectId + "/tasks",
+                java.util.Map.of("taskId", taskId, "action", "TASK_DELETED")
+            );
+        } catch (Exception e) {
+            log.warn("Failed to broadcast task deletion: {}", e.getMessage());
+        }
+    }
+
+    // ── Subtasks & Time Tracking ─────────────────────────────────────────────
+
+    @Transactional
+    public SubtaskResponse addSubtask(UUID taskId, CreateSubtaskRequest request, UserDetails currentUser) {
+        Task task = findTaskOrThrow(taskId);
+        User user = resolveUser(currentUser);
+        assertProjectMember(task.getProject().getId(), user.getId());
+
+        Subtask subtask = Subtask.builder()
+            .title(request.getTitle())
+            .task(task)
+            .isCompleted(false)
+            .build();
+            
+        Subtask saved = subtaskRepository.save(subtask);
+        
+        TaskResponse response = TaskResponse.fromEntity(task);
+        broadcastTaskUpdate(task.getProject().getId(), response, "SUBTASK_ADDED");
+        
+        return SubtaskResponse.builder()
+            .id(saved.getId())
+            .title(saved.getTitle())
+            .isCompleted(saved.getIsCompleted())
+            .taskId(task.getId())
+            .createdAt(saved.getCreatedAt())
+            .build();
+    }
+
+    @Transactional
+    public SubtaskResponse toggleSubtask(UUID subtaskId, UserDetails currentUser) {
+        Subtask subtask = subtaskRepository.findById(subtaskId)
+            .orElseThrow(() -> new ResourceNotFoundException("Subtask not found"));
+        Task task = subtask.getTask();
+        User user = resolveUser(currentUser);
+        assertProjectMember(task.getProject().getId(), user.getId());
+
+        subtask.setIsCompleted(!subtask.getIsCompleted());
+        Subtask saved = subtaskRepository.save(subtask);
+        
+        TaskResponse response = TaskResponse.fromEntity(task);
+        broadcastTaskUpdate(task.getProject().getId(), response, "SUBTASK_TOGGLED");
+
+        return SubtaskResponse.builder()
+            .id(saved.getId())
+            .title(saved.getTitle())
+            .isCompleted(saved.getIsCompleted())
+            .taskId(task.getId())
+            .createdAt(saved.getCreatedAt())
+            .build();
+    }
+
+    @Transactional
+    public void deleteSubtask(UUID subtaskId, UserDetails currentUser) {
+        Subtask subtask = subtaskRepository.findById(subtaskId)
+            .orElseThrow(() -> new ResourceNotFoundException("Subtask not found"));
+        Task task = subtask.getTask();
+        User user = resolveUser(currentUser);
+        assertCanModifyTask(task, user);
+
+        subtaskRepository.delete(subtask);
+        
+        TaskResponse response = TaskResponse.fromEntity(task);
+        broadcastTaskUpdate(task.getProject().getId(), response, "SUBTASK_DELETED");
+    }
+
+    @Transactional
+    public TaskResponse logTime(UUID taskId, Double hours, UserDetails currentUser) {
+        Task task = findTaskOrThrow(taskId);
+        User user = resolveUser(currentUser);
+        assertProjectMember(task.getProject().getId(), user.getId());
+
+        Double currentLogged = task.getLoggedHours() != null ? task.getLoggedHours() : 0.0;
+        task.setLoggedHours(currentLogged + hours);
+        
+        Task saved = taskRepository.save(task);
+        
+        TaskResponse response = TaskResponse.fromEntity(saved);
+        broadcastTaskUpdate(task.getProject().getId(), response, "TIME_LOGGED");
+        return response;
     }
 
     // ── Status Transition Rules ───────────────────────────────────────────────
@@ -218,6 +323,17 @@ public class TaskService {
 
         if (!isAdmin && !isProjectManager) {
             throw new ForbiddenException("Only project managers can delete tasks");
+        }
+    }
+
+    private void broadcastTaskUpdate(UUID projectId, TaskResponse task, String action) {
+        try {
+            java.util.Map<String, Object> payload = new java.util.HashMap<>();
+            payload.put("action", action);
+            payload.put("task", task);
+            messagingTemplate.convertAndSend("/topic/project/" + projectId + "/tasks", payload);
+        } catch (Exception e) {
+            log.warn("Failed to broadcast task update: {}", e.getMessage());
         }
     }
 }

@@ -82,6 +82,25 @@ export const taskService = {
     const response = await api.get(`/tasks/${taskId}/activities`, { params });
     return response.data;
   },
+
+  async addSubtask(taskId, title) {
+    const response = await api.post(`/tasks/${taskId}/subtasks`, { title });
+    return response.data;
+  },
+
+  async toggleSubtask(subtaskId) {
+    const response = await api.patch(`/subtasks/${subtaskId}/toggle`);
+    return response.data;
+  },
+
+  async deleteSubtask(subtaskId) {
+    await api.delete(`/subtasks/${subtaskId}`);
+  },
+
+  async logTime(taskId, hours) {
+    const response = await api.post(`/tasks/${taskId}/time`, { hours });
+    return response.data;
+  },
 };
 
 // ─── commentService ───────────────────────────────────────────────────────────
@@ -103,6 +122,34 @@ export const commentService = {
 
   async deleteComment(commentId) {
     await api.delete(`/comments/${commentId}`);
+  },
+};
+
+// ─── attachmentService ────────────────────────────────────────────────────────
+export const attachmentService = {
+  async getAttachments(taskId) {
+    const response = await api.get(`/tasks/${taskId}/attachments`);
+    return response.data;
+  },
+
+  async uploadAttachment(taskId, file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post(`/tasks/${taskId}/attachments`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  async downloadAttachment(attachmentId) {
+    const response = await api.get(`/attachments/${attachmentId}/download`, {
+      responseType: 'blob', // Important for downloading binary files
+    });
+    return response.data;
+  },
+
+  async deleteAttachment(attachmentId) {
+    await api.delete(`/attachments/${attachmentId}`);
   },
 };
 

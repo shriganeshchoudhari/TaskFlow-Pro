@@ -12,9 +12,16 @@ import {
   fetchTask, updateTask, updateTaskStatus, deleteTask,
   selectSelectedTask, selectTasksLoading
 } from '../store/slices/tasksSlice';
+import { attachmentService } from '../services/taskService';
 import CommentSection from '../components/tasks/CommentSection';
 import ActivityFeed from '../components/shared/ActivityFeed';
+import FileUploadZone from '../components/tasks/FileUploadZone';
+import SubtaskList from '../components/tasks/SubtaskList';
+import TimeTracker from '../components/tasks/TimeTracker';
 import { useSnackbar } from 'notistack';
+import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
+import DownloadIcon from '@mui/icons-material/Download';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 const STATUS_OPTIONS = ['TODO', 'IN_PROGRESS', 'REVIEW', 'DONE'];
 const STATUS_COLOR = { TODO: 'default', IN_PROGRESS: 'primary', REVIEW: 'secondary', DONE: 'success' };
@@ -31,9 +38,61 @@ export default function TaskDetailPage() {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState('');
 
+  const [attachments, setAttachments] = useState([]);
+  const [uploading, setUploading] = useState(false);
+
   useEffect(() => {
     dispatch(fetchTask(taskId));
+    fetchAttachments();
   }, [dispatch, taskId]);
+
+  const fetchAttachments = async () => {
+    try {
+      const data = await attachmentService.getAttachments(taskId);
+      setAttachments(data);
+    } catch (err) {
+      console.error('Failed to load attachments', err);
+    }
+  };
+
+  const handleFileUpload = async (file) => {
+    try {
+      setUploading(true);
+      await attachmentService.uploadAttachment(taskId, file);
+      enqueueSnackbar('File uploaded successfully', { variant: 'success' });
+      fetchAttachments();
+    } catch (err) {
+      enqueueSnackbar(err.response?.data?.message || 'Failed to upload file', { variant: 'error' });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDownloadAttachment = async (attachment) => {
+    try {
+      const blob = await attachmentService.downloadAttachment(attachment.id);
+      const url = window.URL.createObjectURL(new Blob([blob]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', attachment.fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+    } catch (err) {
+      enqueueSnackbar('Failed to download attachment', { variant: 'error' });
+    }
+  };
+
+  const handleDeleteAttachment = async (attachmentId) => {
+    if (!window.confirm('Are you sure you want to delete this attachment?')) return;
+    try {
+      await attachmentService.deleteAttachment(attachmentId);
+      enqueueSnackbar('Attachment deleted', { variant: 'success' });
+      fetchAttachments();
+    } catch (err) {
+      enqueueSnackbar(err.response?.data?.message || 'Failed to delete attachment', { variant: 'error' });
+    }
+  };
 
   useEffect(() => {
     if (task) setTitleValue(task.title);
@@ -159,6 +218,48 @@ export default function TaskDetailPage() {
 
           <Divider sx={{ mb: 3 }} />
 
+          {/* Subtasks */}
+          <SubtaskList 
+            taskId={taskId} 
+            subtasks={task.subtasks} 
+            onUpdate={() => dispatch(fetchTask(taskId))} 
+          />
+
+          <Divider sx={{ my: 3 }} />
+
+          {/* Attachments */}
+          <Typography variant="subtitle2" fontWeight={700} mb={1}>Attachments</Typography>
+          <Box sx={{ mb: 2 }}>
+            <FileUploadZone onFileUpload={handleFileUpload} isUploading={uploading} />
+          </Box>
+          {attachments.length > 0 && (
+            <Box sx={{ mb: 3, display: 'flex', flexDirection: 'column', gap: 1 }}>
+              {attachments.map((att) => (
+                <Box key={att.id} sx={{ display: 'flex', alignItems: 'center', p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                  <InsertDriveFileIcon color="action" sx={{ mr: 1 }} />
+                  <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
+                    <Typography variant="body2" noWrap title={att.fileName}>{att.fileName}</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {(att.fileSize / 1024).toFixed(1)} KB • {format(new Date(att.createdAt), 'MMM d, p')}
+                    </Typography>
+                  </Box>
+                  <Tooltip title="Download">
+                    <IconButton size="small" onClick={() => handleDownloadAttachment(att)}>
+                      <DownloadIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Delete">
+                    <IconButton size="small" color="error" onClick={() => handleDeleteAttachment(att.id)}>
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              ))}
+            </Box>
+          )}
+
+          <Divider sx={{ mb: 3 }} />
+
           {/* Comments */}
           <CommentSection taskId={taskId} />
 
@@ -237,7 +338,7 @@ export default function TaskDetailPage() {
             )}
 
             {/* Created */}
-            <Box sx={{ mb: 2 }}>
+            <Box sx={{ mb: 3 }}>
               <Typography variant="caption" color="text.secondary" display="block" mb={0.5}>
                 Created
               </Typography>
@@ -247,6 +348,17 @@ export default function TaskDetailPage() {
             </Box>
 
             <Divider sx={{ my: 2 }} />
+
+            {/* Time Tracker */}
+            <TimeTracker 
+              taskId={taskId} 
+              estimatedHours={task.estimatedHours} 
+              loggedHours={task.loggedHours} 
+              onUpdate={() => dispatch(fetchTask(taskId))} 
+            />
+
+            <Divider sx={{ my: 2 }} />
+            
             <Button
               variant="outlined"
               color="error"
