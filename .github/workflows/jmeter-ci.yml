@@ -1,0 +1,76 @@
+name: JMeter CI
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  jmeter-load:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start stack
+        run: docker compose -f infra/docker/docker-compose.dev.yml up -d
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+      - name: Wait for backend
+        run: |
+          for i in $(seq 1 24); do
+            curl -sf http://localhost:8080/actuator/health | grep -q '"UP"' && exit 0; sleep 5
+          done; exit 1
+
+      - name: Setup Java 21 (JMeter requirement)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install JMeter 5.6.3
+        run: |
+          wget -q https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-5.6.3.tgz
+          tar -xzf apache-jmeter-5.6.3.tgz
+          echo "$(pwd)/apache-jmeter-5.6.3/bin" >> $GITHUB_PATH
+
+      - name: Generate test users CSV
+        run: |
+          python3 tests/performance/jmeter/data/generate-test-users.py \
+            --count 300 \
+            --output tests/performance/jmeter/data/users.csv \
+            --register \
+            --base-url http://localhost:8080
+
+      - name: Run JMeter load test
+        run: |
+          mkdir -p results/jmeter
+          jmeter -n \
+            -t tests/performance/jmeter/TaskFlowPro.jmx \
+            -l results/jmeter/load-results.jtl \
+            -e -o results/jmeter/html-report \
+            -JBASE_URL=http://localhost:8080 \
+            -JTHREAD_COUNT=300 \
+            -JRAMP_UP=120 \
+            -JDURATION=600
+
+      - name: Check error threshold
+        run: |
+          python3 - results/jmeter/load-results.jtl <<'PY'
+          import csv, sys
+          rows = list(csv.DictReader(open(sys.argv[1])))
+          total = len(rows); errors = sum(1 for r in rows if r.get('success','true') != 'true')
+          rate = errors/total*100 if total else 0
+          print(f"Requests: {total} | Errors: {errors} | Error rate: {rate:.2f}%")
+          if rate > 1.0: print("FAIL: error rate > 1%"); sys.exit(1)
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jmeter-results
+          path: results/jmeter/
+
+      - name: Teardown
+        if: always()
+        run: docker compose -f infra/docker/docker-compose.dev.yml down -v

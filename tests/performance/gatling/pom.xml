@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- PT-GA-07/08 — Gatling Maven build (alternative to sbt) -->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.taskflow</groupId>
+  <artifactId>taskflow-gatling</artifactId>
+  <version>1.0.0</version>
+  <packaging>jar</packaging>
+
+  <properties>
+    <maven.compiler.source>11</maven.compiler.source>
+    <maven.compiler.target>11</maven.compiler.target>
+    <scala.version>2.13.12</scala.version>
+    <gatling.version>3.10.3</gatling.version>
+    <gatling-plugin.version>4.6.0</gatling-plugin.version>
+    <!-- Override with -DBASE_URL=http://staging:8080 -->
+    <BASE_URL>http://localhost:8080</BASE_URL>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.gatling.highcharts</groupId>
+      <artifactId>gatling-charts-highcharts</artifactId>
+      <version>${gatling.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.gatling</groupId>
+      <artifactId>gatling-test-framework</artifactId>
+      <version>${gatling.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <sourceDirectory>src/test/scala</sourceDirectory>
+    <testSourceDirectory>src/test/scala</testSourceDirectory>
+    <plugins>
+
+      <!-- Scala compiler -->
+      <plugin>
+        <groupId>net.alchim31.maven</groupId>
+        <artifactId>scala-maven-plugin</artifactId>
+        <version>4.9.1</version>
+        <executions>
+          <execution>
+            <goals><goal>testCompile</goal></goals>
+          </execution>
+        </executions>
+        <configuration>
+          <scalaVersion>${scala.version}</scalaVersion>
+        </configuration>
+      </plugin>
+
+      <!-- Gatling Maven plugin -->
+      <plugin>
+        <groupId>io.gatling</groupId>
+        <artifactId>gatling-maven-plugin</artifactId>
+        <version>${gatling-plugin.version}</version>
+        <configuration>
+          <!-- Pass BASE_URL as JVM system property to simulations -->
+          <jvmArgs>
+            <jvmArg>-DBASE_URL=${BASE_URL}</jvmArg>
+            <jvmArg>-Xmx512m</jvmArg>
+          </jvmArgs>
+          <resultsFolder>${project.build.directory}/gatling</resultsFolder>
+        </configuration>
+      </plugin>
+
+    </plugins>
+  </build>
+
+</project>

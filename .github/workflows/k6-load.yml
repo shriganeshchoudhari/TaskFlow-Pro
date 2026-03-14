@@ -1,0 +1,144 @@
+name: k6 Load Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - "backend/**"
+      - "tests/performance/k6/**"
+      - ".github/workflows/k6-load.yml"
+  workflow_dispatch:
+
+jobs:
+  # ── Smoke: every PR, ~2 min ──────────────────────────────────────────────────
+  smoke:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start backend stack
+        run: docker compose -f infra/docker/docker-compose.dev.yml up -d postgres backend
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET || 'dGVzdC1zZWNyZXQta2V5LW11c3QtYmUtYXQtbGVhc3QtNTEyLWJpdHMtbG9uZy1mb3ItaHM1MTI=' }}
+
+      - name: Wait for backend
+        run: |
+          for i in $(seq 1 24); do
+            curl -sf http://localhost:8080/actuator/health | grep -q '"UP"' && echo "UP" && exit 0
+            sleep 5
+          done; exit 1
+
+      - uses: grafana/setup-k6-action@v1
+
+      - name: Run smoke test
+        run: k6 run tests/performance/k6/smoke.js --env BASE_URL=http://localhost:8080 \
+               --summary-export=k6-smoke-summary.json
+        continue-on-error: false
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: k6-smoke-results
+          path: k6-smoke-summary.json
+
+      - name: Teardown
+        if: always()
+        run: docker compose -f infra/docker/docker-compose.dev.yml down -v
+
+  # ── Load: every main merge, ~15 min ─────────────────────────────────────────
+  load:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start full stack
+        run: docker compose -f infra/docker/docker-compose.dev.yml up -d
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+      - name: Wait for backend
+        run: |
+          for i in $(seq 1 24); do
+            curl -sf http://localhost:8080/actuator/health | grep -q '"UP"' && exit 0
+            sleep 5
+          done; exit 1
+
+      - name: Seed performance data
+        run: |
+          psql "${{ secrets.PERF_DB_URL || 'postgresql://taskflow:taskflow_dev_password@localhost:5432/taskflow_dev' }}" \
+            -f tests/performance/scripts/seed-perf-data.sql
+
+      - uses: grafana/setup-k6-action@v1
+
+      - name: Run load test
+        run: k6 run tests/performance/k6/load_test.js \
+               --env BASE_URL=http://localhost:8080 \
+               --summary-export=k6-load-summary.json
+        env:
+          K6_OUT: json=k6-load-results.json
+
+      - name: Regression check
+        run: |
+          python tests/performance/scripts/regression_check.py k6-load-summary.json \
+            --baseline tests/performance/baselines/perf-baseline.json \
+            --threshold 20
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER:    ${{ github.event.number }}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: k6-load-results
+          path: |
+            k6-load-summary.json
+            k6-load-results.json
+
+      - name: Teardown
+        if: always()
+        run: docker compose -f infra/docker/docker-compose.dev.yml down -v
+
+  # ── Stress + Spike: weekly scheduled ─────────────────────────────────────────
+  stress-spike:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start stack
+        run: docker compose -f infra/docker/docker-compose.dev.yml up -d
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+      - name: Wait for backend
+        run: |
+          for i in $(seq 1 24); do
+            curl -sf http://localhost:8080/actuator/health | grep -q '"UP"' && exit 0
+            sleep 5
+          done; exit 1
+
+      - uses: grafana/setup-k6-action@v1
+
+      - name: Run stress test
+        run: k6 run tests/performance/k6/stress_test.js \
+               --env BASE_URL=http://localhost:8080 \
+               --summary-export=k6-stress-summary.json
+        continue-on-error: true   # stress tests are expected to expose limits
+
+      - name: Run spike test
+        run: k6 run tests/performance/k6/spike_test.js \
+               --env BASE_URL=http://localhost:8080 \
+               --summary-export=k6-spike-summary.json
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: k6-stress-spike-results
+          path: "*.json"
+
+      - name: Teardown
+        if: always()
+        run: docker compose -f infra/docker/docker-compose.dev.yml down -v

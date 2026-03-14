@@ -6,6 +6,8 @@
 
 ---
 
+**Version:** 2.0.0  *(updated 2026-03-14 — Phase 7 performance testing added)*
+
 ## Table of Contents
 1. [Testing Strategy](#1-testing-strategy)
 2. [Test Environments](#2-test-environments)
@@ -150,12 +152,73 @@ See `TEST_CASES_E2E.md` for full scenario specifications.
 
 ---
 
-### 3.5 Performance Tests (k6 — v1.1)
+### 3.5 Performance Tests (Phase 7 — 4 Tools, 4 Test Types)
 
-- Target: P95 API response ≤ 300ms at 500 concurrent users
-- Load test: Ramp from 0 to 500 VUs over 5 minutes, hold 10 minutes
-- Stress test: Ramp to 1000 VUs to find breaking point
-- Endpoints tested: Login, GET projects, GET tasks, POST tasks
+**SLA Thresholds (enforced by all tools):**
+
+| Metric | Target |
+|--------|--------|
+| P95 latency | < 300 ms |
+| P99 latency | < 800 ms |
+| Error rate | < 1% |
+
+#### k6 (primary CI tool)
+
+| Script | Test Type | Configuration | CI Trigger |
+|--------|-----------|---------------|------------|
+| `k6/smoke.js` | Smoke | 5 VU · 30s | Every PR |
+| `k6/load_test.js` | Load | 0→500 VU · 15min · mixed workload | Every main merge |
+| `k6/stress_test.js` | Stress | 0→1500 VU · find ceiling | Weekly (dispatch) |
+| `k6/spike_test.js` | Spike | 0→1000 in 10s · recovery ≤ 30s | Weekly (dispatch) |
+| `k6/auth_flow.js` | Load | JWT lifecycle: register→login→refresh→logout | On demand |
+| `k6/board_scenario.js` | Load | Full board: load→create→comment→status moves | On demand |
+| `k6/notification_spike.js` | Spike | Fan-out: 500 users polling simultaneously | On demand |
+| `k6/rps_test.js` | Stress | Constant-arrival-rate · 300 rps | On demand |
+
+#### JMeter (load + soak)
+
+| Test Plan | Test Type | Configuration |
+|-----------|-----------|---------------|
+| `jmeter/TaskFlowPro.jmx` | Load | 300 threads · CSV auth · full task lifecycle |
+| `jmeter/Soak_24h.jmx` | Soak | 100 threads · 24 hours · hourly snapshots |
+
+Seed users before first run: `python3 jmeter/data/generate-test-users.py --count 300 --register`
+
+#### Gatling (high-concurrency stress)
+
+| Simulation | Test Type | Configuration |
+|------------|-----------|---------------|
+| `gatling/…/LoadSimulation.scala` | Load | 300 VU · 3 weighted scenarios (60/30/10) |
+| `gatling/…/StressSimulation.scala` | Stress | Step-ramp to 1000 VU · recovery measurement |
+
+#### Locust (Python — exploratory + soak)
+
+| Script | Test Type | Configuration |
+|--------|-----------|---------------|
+| `locust/locustfile.py` | Load / Stress / Spike | Weighted tasks · threshold hook on quit |
+| `locust/soak_locustfile.py` | Soak | 50 VU · 8 hours · auto token-refresh |
+
+#### Shared infrastructure
+
+- `scripts/seed-perf-data.sql` — 50 users, 5 projects, 200 tasks, 100 comments (idempotent)
+- `scripts/reset-perf-db.sh` — truncate + re-seed before each major test run
+- `baselines/perf-baseline.json` — P95 per endpoint at 500 VUs (regression gate)
+- `scripts/regression_check.py` — fail CI if any endpoint degrades > 20% from baseline
+- `reports/generate-perf-report.py` — unified HTML from k6 JSON + JMeter JTL + Gatling log + Locust CSV
+
+#### Performance stack (docker-compose.perf.yml)
+
+```bash
+# Start with InfluxDB (unified metrics sink for all 4 tools)
+docker compose -f infra/docker/docker-compose.dev.yml \
+               -f infra/docker/docker-compose.perf.yml up -d
+
+# k6 with InfluxDB output
+K6_OUT=influxdb=http://localhost:8086/k6 k6 run k6/load_test.js
+
+# Grafana perf dashboard on :3001
+open http://localhost:3001
+```
 
 ---
 
@@ -282,7 +345,12 @@ stages:
 | API Testing | Postman + Newman | Latest | REST API collection tests |
 | API Debugging | REST Client (VS Code) | — | Manual API exploration |
 | E2E Testing | Playwright | 1.40 | Browser automation |
-| Performance | k6 | 0.48 (v1.1) | Load testing |
+| Performance | k6 | 0.50+ | Load · Stress · Spike testing (primary CI tool) |
+| Performance | Apache JMeter | 5.6.3 | Realistic browser-like load + 24h soak testing |
+| Performance | Gatling | 3.10.3 | High-concurrency Scala DSL stress testing |
+| Performance | Locust | 2.28 | Python exploratory stress + spike + 8h soak |
+| Perf Metrics | InfluxDB | 2.7 | Unified metrics sink for all 4 perf tools |
+| Perf Report | Python script | 3.12 | Unified HTML report from all tool outputs |
 | SAST | SpotBugs + FSB | 4.8 | Static security analysis |
 | DAST | OWASP ZAP | 2.14 | Dynamic security scanning |
 | Dependency CVE | OWASP Dep-Check | 9.0 | Known vulnerability detection |

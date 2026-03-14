@@ -1,10 +1,10 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SubtaskList from './SubtaskList';
-import { taskService } from '../../../services/taskService';
+import { taskService } from '../../services/taskService';
 import { SnackbarProvider } from 'notistack';
 
-vi.mock('../../../services/taskService');
+vi.mock('../../services/taskService');
 
 describe('SubtaskList Component', () => {
   const onUpdateMock = vi.fn();

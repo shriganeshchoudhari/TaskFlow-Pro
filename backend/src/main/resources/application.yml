@@ -33,6 +33,7 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
+    repair-on-migrate: true   # auto-repairs any previously-failed migration checksum
     locations: classpath:db/migration
 
 server:
@@ -47,7 +48,9 @@ server:
 # Custom App Configuration
 app:
   jwt:
-    secret: ${JWT_SECRET:changeme-this-must-be-at-least-512-bits-long-for-hs512-algorithm}
+    # Default is Base64("changeme-this-must-be-at-least-512-bits-long-for-hs512-algorithm") — 64 bytes / 512 bits
+    # ALWAYS override JWT_SECRET with a strong random value in staging/production
+    secret: ${JWT_SECRET:Y2hhbmdlbWUtdGhpcy1tdXN0LWJlLWF0LWxlYXN0LTUxMi1iaXRzLWxvbmctZm9yLWhzNTEyLWFsZ29yaXRobQ==}
     access-token-expiry-ms: ${JWT_EXPIRY_MS:900000}         # 15 minutes
     refresh-token-expiry-ms: ${JWT_REFRESH_EXPIRY_MS:604800000} # 7 days
   cors:
@@ -66,6 +69,16 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+      group:
+        liveness:
+          include: livenessState
+        readiness:
+          include: readinessState,db,diskSpace
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
   metrics:
     tags:
       application: ${spring.application.name}

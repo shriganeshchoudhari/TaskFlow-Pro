@@ -20,6 +20,7 @@ export default function TaskCard({ task }) {
     <Card
       variant="outlined"
       data-testid={`task-card-${task.id}`}
+      data-priority={task.priority}
       sx={{
         mb: 1.5,
         borderLeft: `4px solid ${PRIORITY_BORDER[task.priority] || '#1976d2'}`,

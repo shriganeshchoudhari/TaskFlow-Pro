@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- PT-JM-01 to PT-JM-07 — TaskFlow Pro JMeter Load Test Plan
+     Run: jmeter -n -t TaskFlowPro.jmx -l results/load.jtl -e -o reports/html
+          -JBASE_URL=http://localhost:8080
+          -JTHREAD_COUNT=300
+          -JRAMP_UP=120
+          -JDURATION=600
+     Generate report: ./generate-report.sh results/load.jtl
+-->
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.3">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="TaskFlow Pro Load Test">
+      <stringProp name="TestPlan.comments">Phase 7 · PT-JM-01 — Load test covering auth, projects, tasks, comments</stringProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments">
+        <collectionProp name="Arguments.arguments">
+          <elementProp name="BASE_URL" elementType="Argument">
+            <stringProp name="Argument.name">BASE_URL</stringProp>
+            <stringProp name="Argument.value">${__P(BASE_URL,http://localhost:8080)}</stringProp>
+          </elementProp>
+          <elementProp name="THREAD_COUNT" elementType="Argument">
+            <stringProp name="Argument.name">THREAD_COUNT</stringProp>
+            <stringProp name="Argument.value">${__P(THREAD_COUNT,300)}</stringProp>
+          </elementProp>
+          <elementProp name="RAMP_UP" elementType="Argument">
+            <stringProp name="Argument.name">RAMP_UP</stringProp>
+            <stringProp name="Argument.value">${__P(RAMP_UP,120)}</stringProp>
+          </elementProp>
+          <elementProp name="DURATION" elementType="Argument">
+            <stringProp name="Argument.name">DURATION</stringProp>
+            <stringProp name="Argument.value">${__P(DURATION,600)}</stringProp>
+          </elementProp>
+        </collectionProp>
+      </elementProp>
+    </TestPlan>
+    <hashTree>
+
+      <!-- ── HTTP Defaults ─────────────────────────────────────────────────── -->
+      <ConfigTestElement guiclass="HttpDefaultsGui" testclass="ConfigTestElement" testname="HTTP Request Defaults">
+        <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+          <collectionProp name="Arguments.arguments"/>
+        </elementProp>
+        <stringProp name="HTTPSampler.domain">${__groovy(vars.get("BASE_URL").replace("http://","").replace("https://","").split(":")[0])}</stringProp>
+        <stringProp name="HTTPSampler.port">${__groovy(vars.get("BASE_URL").contains(":8080") ? "8080" : "80")}</stringProp>
+        <stringProp name="HTTPSampler.protocol">${__groovy(vars.get("BASE_URL").startsWith("https") ? "https" : "http")}</stringProp>
+        <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+        <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+      </ConfigTestElement>
+      <hashTree/>
+
+      <!-- ── HTTP Header Manager ───────────────────────────────────────────── -->
+      <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Headers">
+        <collectionProp name="HeaderManager.headers">
+          <elementProp name="Content-Type" elementType="Header">
+            <stringProp name="Header.name">Content-Type</stringProp>
+            <stringProp name="Header.value">application/json</stringProp>
+          </elementProp>
+          <elementProp name="Accept" elementType="Header">
+            <stringProp name="Header.name">Accept</stringProp>
+            <stringProp name="Header.value">application/json</stringProp>
+          </elementProp>
+        </collectionProp>
+      </HeaderManager>
+      <hashTree/>
+
+      <!-- ── CSV Data Set (users.csv) ──────────────────────────────────────── -->
+      <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="Test Users CSV">
+        <stringProp name="filename">data/users.csv</stringProp>
+        <stringProp name="variableNames">fullName,email,password</stringProp>
+        <boolProp name="ignoreFirstLine">true</boolProp>
+        <stringProp name="delimiter">,</stringProp>
+        <boolProp name="recycle">true</boolProp>
+        <boolProp name="stopThread">false</boolProp>
+        <stringProp name="shareMode">shareMode.all</stringProp>
+      </CSVDataSet>
+      <hashTree/>
+
+      <!-- ── Main Thread Group ─────────────────────────────────────────────── -->
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="TaskFlow Pro Load">
+        <stringProp name="ThreadGroup.num_threads">${THREAD_COUNT}</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">${RAMP_UP}</stringProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.duration">${DURATION}</stringProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController">
+          <boolProp name="LoopController.continue_forever">true</boolProp>
+          <intProp name="LoopController.loops">-1</intProp>
+        </elementProp>
+      </ThreadGroup>
+      <hashTree>
+
+        <!-- PT-JM-02: Auth — Login & extract token -->
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST /auth/login">
+          <stringProp name="HTTPSampler.path">/api/v1/auth/login</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <stringProp name="Argument.value">{"email":"${email}","password":"${password}"}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+                <boolProp name="HTTPArgument.use_equals">true</boolProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <JSONPathExtractor guiclass="JSONPathExtractorGui" testclass="JSONPathExtractor" testname="Extract access_token">
+            <stringProp name="JSONPathExtractor.referenceName">access_token</stringProp>
+            <stringProp name="JSONPathExtractor.jsonPathExpr">$.accessToken</stringProp>
+            <stringProp name="JSONPathExtractor.defaultValue">TOKEN_NOT_FOUND</stringProp>
+          </JSONPathExtractor>
+          <hashTree/>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Login 200">
+            <collectionProp name="Asserion.test_strings"><stringProp name="49586">200</stringProp></collectionProp>
+            <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+            <intProp name="Assertion.test_type">8</intProp>
+          </ResponseAssertion>
+          <hashTree/>
+        </hashTree>
+
+        <!-- Set auth header for all subsequent requests -->
+        <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Auth Header">
+          <collectionProp name="HeaderManager.headers">
+            <elementProp name="Authorization" elementType="Header">
+              <stringProp name="Header.name">Authorization</stringProp>
+              <stringProp name="Header.value">Bearer ${access_token}</stringProp>
+            </elementProp>
+          </collectionProp>
+        </HeaderManager>
+        <hashTree/>
+
+        <!-- PT-JM-03: Project Workflow -->
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="GET /projects">
+          <stringProp name="HTTPSampler.path">/api/v1/projects</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <JSONPathExtractor guiclass="JSONPathExtractorGui" testclass="JSONPathExtractor" testname="Extract project_id">
+            <stringProp name="JSONPathExtractor.referenceName">project_id</stringProp>
+            <stringProp name="JSONPathExtractor.jsonPathExpr">$.content[0].id</stringProp>
+            <stringProp name="JSONPathExtractor.defaultValue">NO_PROJECT</stringProp>
+          </JSONPathExtractor>
+          <hashTree/>
+          <DurationAssertion guiclass="DurationAssertionGui" testclass="DurationAssertion" testname="Response < 500ms">
+            <longProp name="DurationAssertion.duration">500</longProp>
+          </DurationAssertion>
+          <hashTree/>
+        </hashTree>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="GET /projects/:id/tasks">
+          <stringProp name="HTTPSampler.path">/api/v1/projects/${project_id}/tasks</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <JSONPathExtractor guiclass="JSONPathExtractorGui" testclass="JSONPathExtractor" testname="Extract task_id">
+            <stringProp name="JSONPathExtractor.referenceName">task_id</stringProp>
+            <stringProp name="JSONPathExtractor.jsonPathExpr">$.content[0].id</stringProp>
+            <stringProp name="JSONPathExtractor.defaultValue">NO_TASK</stringProp>
+          </JSONPathExtractor>
+          <hashTree/>
+        </hashTree>
+
+        <!-- PT-JM-04: Task Lifecycle -->
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST /tasks">
+          <stringProp name="HTTPSampler.path">/api/v1/projects/${project_id}/tasks</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <stringProp name="Argument.value">{"title":"JMeter Task ${__threadNum}-${__counter(TRUE,)}","priority":"MEDIUM"}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <JSONPathExtractor guiclass="JSONPathExtractorGui" testclass="JSONPathExtractor" testname="Extract new_task_id">
+            <stringProp name="JSONPathExtractor.referenceName">new_task_id</stringProp>
+            <stringProp name="JSONPathExtractor.jsonPathExpr">$.id</stringProp>
+            <stringProp name="JSONPathExtractor.defaultValue">NO_TASK</stringProp>
+          </JSONPathExtractor>
+          <hashTree/>
+        </hashTree>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="PATCH /tasks/:id/status">
+          <stringProp name="HTTPSampler.path">/api/v1/tasks/${new_task_id}/status</stringProp>
+          <stringProp name="HTTPSampler.method">PATCH</stringProp>
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <stringProp name="Argument.value">{"status":"IN_PROGRESS"}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree/>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="GET /notifications">
+          <stringProp name="HTTPSampler.path">/api/v1/notifications</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree/>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="GET /dashboard/summary">
+          <stringProp name="HTTPSampler.path">/api/v1/dashboard/summary</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree/>
+
+        <!-- Think time: 1–3 s between iterations -->
+        <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="Think Time">
+          <intProp name="calcMode">1</intProp>
+          <doubleProp><name>throughput</name><value>300.0</value></doubleProp>
+        </ConstantThroughputTimer>
+        <hashTree/>
+
+      </hashTree><!-- /ThreadGroup -->
+
+      <!-- PT-JM-07: Backend Listener → InfluxDB -->
+      <BackendListener guiclass="BackendListenerGui" testclass="BackendListener" testname="InfluxDB Backend Listener">
+        <elementProp name="arguments" elementType="Arguments">
+          <collectionProp name="Arguments.arguments">
+            <elementProp name="influxdbUrl" elementType="Argument">
+              <stringProp name="Argument.name">influxdbUrl</stringProp>
+              <stringProp name="Argument.value">http://localhost:8086/api/v2/write?org=taskflow&amp;bucket=perf_results&amp;precision=ms</stringProp>
+            </elementProp>
+            <elementProp name="application" elementType="Argument">
+              <stringProp name="Argument.name">application</stringProp>
+              <stringProp name="Argument.value">taskflow-jmeter</stringProp>
+            </elementProp>
+            <elementProp name="measurement" elementType="Argument">
+              <stringProp name="Argument.name">measurement</stringProp>
+              <stringProp name="Argument.value">jmeter</stringProp>
+            </elementProp>
+          </collectionProp>
+        </elementProp>
+        <stringProp name="classname">org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient</stringProp>
+      </BackendListener>
+      <hashTree/>
+
+      <!-- Summary Report -->
+      <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary Report">
+        <boolProp name="ResultCollector.error_logging">false</boolProp>
+        <stringProp name="filename">results/jmeter/summary.jtl</stringProp>
+      </ResultCollector>
+      <hashTree/>
+
+    </hashTree><!-- /TestPlan/hashTree -->
+  </hashTree>
+</jmeterTestPlan>

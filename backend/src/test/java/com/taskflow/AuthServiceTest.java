@@ -7,6 +7,7 @@ import com.taskflow.dto.response.UserResponse;
 import com.taskflow.exception.ConflictException;
 import com.taskflow.exception.UnauthorizedException;
 import com.taskflow.model.User;
+import com.taskflow.repository.RefreshTokenRepository;
 import com.taskflow.repository.UserRepository;
 import com.taskflow.security.JwtTokenProvider;
 import com.taskflow.service.AuthService;
@@ -37,6 +38,7 @@ class AuthServiceTest {
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private JwtTokenProvider jwtTokenProvider;
     @Mock private AuthenticationManager authenticationManager;
+    @Mock private RefreshTokenRepository refreshTokenRepository;
 
     @InjectMocks private AuthService authService;
 

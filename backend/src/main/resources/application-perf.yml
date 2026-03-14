@@ -1,0 +1,42 @@
+# Spring Boot performance tuning profile
+# Activate with: SPRING_PROFILES_ACTIVE=perf
+# Used by docker-compose.perf.yml and k6/JMeter/Gatling/Locust test runs.
+
+spring:
+  config:
+    activate:
+      on-profile: perf
+
+  datasource:
+    hikari:
+      maximum-pool-size: 50          # up from 20 — sustain 500 VU concurrency
+      minimum-idle: 10
+      connection-timeout: 5000       # fail fast under extreme load
+      idle-timeout: 300000
+      max-lifetime: 1200000
+      leak-detection-threshold: 10000  # warn on connections held > 10 s
+
+  jpa:
+    properties:
+      hibernate:
+        '[generate_statistics]': true   # expose query stats via /actuator/metrics
+        '[session.events.log.LOG_QUERIES_SLOWER_THAN_MS]': 200  # log slow queries
+
+# Expose all actuator endpoints for profiling
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+
+# Verbose perf logging — write slow queries and HikariCP pool stats
+logging:
+  level:
+    '[com.taskflow]':              DEBUG
+    '[com.zaxxer.hikari]':         DEBUG
+    '[org.hibernate.stat]':        INFO
+    '[org.hibernate.SQL]':         DEBUG
+    '[org.hibernate.type.descriptor.sql]': TRACE

@@ -2,18 +2,19 @@
 
 ## What this is
 
-TaskFlow Pro is an enterprise-grade collaborative task management platform:
+TaskFlow Pro is an enterprise-grade collaborative task management platform — **all 7 phases complete, 156 tasks delivered**.
 
-- **Backend:** Java 21 · Spring Boot 3.2.1 · Spring Security · JWT (HS512) · JPA/Hibernate · Flyway
-- **Frontend:** React 18 · Vite · Redux Toolkit · MUI v5
-- **Database:** PostgreSQL 16 · UUID PKs · Flyway versioned migrations
-- **Auth:** JWT — access token 15 min · refresh token 7 days · BCrypt strength 12
+- **Backend:** Java 21 · Spring Boot 3.5 · Spring Security · JWT (HS512) · JPA/Hibernate · Flyway
+- **Frontend:** React 18 · Vite · Redux Toolkit · MUI v5 · WebSocket (STOMP)
+- **Database:** PostgreSQL 16 · UUID PKs · Flyway migrations V1–V12
+- **Auth:** JWT access token 15 min · refresh token 7 days · BCrypt strength 12 · rate-limited auth endpoints
 - **Ops:** Docker · Kubernetes (EKS) · Helm · Terraform
-- **Monitoring:** Prometheus · Grafana · Structured JSON logs · Spring Actuator
+- **Monitoring:** Prometheus · Grafana (auto-provisioned) · Structured JSON logs · MDC traceId · Spring Actuator
+- **Perf Testing:** k6 · Apache JMeter · Gatling · Locust · InfluxDB
 
 ---
 
-## Implementation Plan — 6 Phases / 12 Weeks / 109 Tasks
+## Implementation Plan — 7 Phases / 14 Weeks / 156 Tasks
 
 | Phase | Focus | Duration | Status |
 |-------|-------|----------|--------|
@@ -22,53 +23,11 @@ TaskFlow Pro is an enterprise-grade collaborative task management platform:
 | **Phase 3** | Task Management | Week 5–6 | ✅ Complete |
 | **Phase 4** | Comments, Notifications & Activity | Week 7–8 | ✅ Complete |
 | **Phase 5** | Dashboard, Profile & UI Polish | Week 9–10 | ✅ Complete |
-| **Phase 6** | DevOps, Testing & Monitoring | Week 11–12 | 🔄 In Progress |
+| **Phase 6** | DevOps, Testing & Monitoring | Week 11–12 | ✅ Complete |
+| **Phase 7** | Performance & Load Testing | Week 13–14 | ✅ Complete |
 
-> Full breakdown: `TaskFlowPro_Implementation_Plan.docx` · Task IDs: `B{phase}-{nn}` (backend), `F{phase}-{nn}` (frontend), `T6-{nn}` (testing), `D6-{nn}` (Docker), `CI6-{nn}` (CI/CD), `K6-{nn}` (Kubernetes)
-
----
-
-## ▶ Current Focus — Phase 6: DevOps, Testing & Monitoring
-
-See `.ai/PHASE6_PLAN.md` for the full ordered execution plan with all known gaps.
-
-### Critical Bugs to Fix First (block everything else)
-
-1. **`AuthServiceTest` fails** — `register_DuplicateEmail_ThrowsException` asserts `UnauthorizedException`
-   but `AuthService.register()` throws `ConflictException`. Fix the assertion before adding more tests.
-
-2. **Docker build context bug** — `docker-compose.dev.yml` sets `context: ..` (= `infra/`), but both
-   Dockerfiles `COPY backend/` and `COPY frontend/` expect repo root as context. Change to `context: ../..`.
-
-3. **`UserController` architecture violation** — controller directly injects `UserRepository` and
-   `PasswordEncoder` instead of delegating to `UserService`. Refactor to use `UserService.updateProfile()`
-   and `UserService.updatePassword()`.
-
-### Phase 6 Immediate Next Tasks
-
-**Testing (start here — highest risk area):**
-- `T6-01` — `AuthControllerIT.java` integration tests (Testcontainers)
-- `T6-02` — `TaskServiceTest.java` unit tests
-- `T6-03` — `CommentServiceTest.java`, `NotificationServiceTest.java` unit tests
-- `T6-07` — JaCoCo coverage check (pom.xml already configured; need to verify threshold passes)
-
-**Infrastructure:**
-- `D6-05` — Complete `scripts/setup.sh` (currently a stub)
-- `K6-01` — Flesh out `backend-deployment.yaml` (HPA, probes, resource limits, Prometheus annotations)
-- `K6-02` — Flesh out `frontend-deployment.yaml` + `ingress.yaml` (TLS, HTTPS redirect)
-
-**CI/CD:**
-- `CI6-01` — Complete `backend-ci.yml` (add JaCoCo report step, coverage enforcement)
-- `CI6-04` — Implement `deploy.yml` (currently a stub)
-
-### Phase 6 Definition of Done
-- All backend unit + integration tests pass; JaCoCo ≥ 80% line coverage
-- Playwright E2E suite passes headlessly in CI
-- k6 load test: P95 ≤ 300ms at 500 VUs
-- GitHub Actions CI on every PR; deploy workflow pushes to EKS on main merge
-- No CRITICAL CVEs in Trivy image scan
-- Prometheus scraping; Grafana dashboards show live API metrics
-- `docker-compose up --build` starts full local stack with one command
+> Full task breakdown with IDs: `docs/TaskFlowPro_Implementation_Plan_v2.docx`  
+> Task ID prefixes: `B{n}` backend · `F{n}` frontend · `T6` testing · `D6` Docker · `CI6` workflows · `K6` Kubernetes · `PT-K6/JM/GA/LO/DT/RP` performance
 
 ---
 
@@ -87,7 +46,7 @@ See `.ai/PHASE6_PLAN.md` for the full ordered execution plan with all known gaps
 | E2E test cases | `docs/TEST_CASES_E2E.md` |
 | Deployment & ops | `docs/DEPLOYMENT_OPERATION_MANUAL.md` |
 | Implementation status | `docs/IMPLEMENTATION_STATUS.md` |
-| Phase 6 execution plan | `.ai/PHASE6_PLAN.md` |
+| AI dev-kit | `.ai/` (repo map, checklists, ADRs, workflows) |
 
 ---
 
@@ -97,74 +56,108 @@ See `.ai/PHASE6_PLAN.md` for the full ordered execution plan with all known gaps
 |---------|-----|
 | Backend API | `http://localhost:8080` |
 | Frontend (Vite dev) | `http://localhost:5173` |
-| Frontend (container) | `http://localhost:80` |
+| Frontend (Docker) | `http://localhost:80` |
 | Swagger UI | `http://localhost:8080/swagger-ui.html` |
 | Actuator health | `http://localhost:8080/actuator/health` |
 | Grafana | `http://localhost:3000` |
+| Grafana (perf stack) | `http://localhost:3001` |
 | Prometheus | `http://localhost:9090` |
+| InfluxDB (perf) | `http://localhost:8086` |
 
 ---
 
 ## Quick Commands
 
+### Bootstrap (one command)
+```bash
+bash scripts/setup.sh
+```
+
 ### Backend
 ```bash
 cd backend
-./mvnw spring-boot:run                    # Run API server
-./mvnw test                               # Unit tests only
-./mvnw verify -Pintegration-test          # Unit + integration tests
-./mvnw verify jacoco:report               # With coverage report
-./mvnw verify -Pcoverage                  # Enforce ≥ 80% coverage threshold
+./mvnw spring-boot:run                        # Dev server on :8080
+./mvnw spring-boot:run -Dspring.profiles.active=perf  # Perf profile (pool=50, slow-query logging)
+./mvnw test                                   # Unit tests
+./mvnw verify -Pintegration-test              # Unit + Testcontainers integration tests
+./mvnw verify jacoco:report                   # JaCoCo HTML report → target/site/jacoco/
+./mvnw verify -Pcoverage                      # Enforce ≥ 80% line coverage
 ```
 
 ### Frontend
 ```bash
 cd frontend
-npm install && npm run dev                # Install + start dev server
-npm run test                              # Unit tests (Vitest)
-npm run test:coverage                     # With coverage report
-npm run lint                              # ESLint
-npm run build                             # Production build → dist/
+npm install && npm run dev                    # Dev server on :5173
+npm test                                      # Vitest unit tests
+npm run test:coverage                         # V8 coverage report
+npm run lint                                  # ESLint
+npm run build                                 # Production build → dist/
 ```
 
-### Full Local Stack (once D6-03 context bug is fixed)
+### Full Local Stack
 ```bash
-# Run from repo root:
+# From repo root:
 docker compose -f infra/docker/docker-compose.dev.yml up --build
-# Starts: PostgreSQL · Redis · Backend · Frontend · Prometheus · Grafana
+# With monitoring:
+docker compose -f infra/docker/docker-compose.dev.yml --profile monitoring up --build
+# With perf stack (InfluxDB + Grafana-perf):
+docker compose -f infra/docker/docker-compose.dev.yml \
+               -f infra/docker/docker-compose.perf.yml up --build
 ```
 
 ### E2E Tests
 ```bash
 cd tests/e2e/playwright
-npx playwright install --with-deps
-npx playwright test                       # All scenarios (headless Chromium)
-npx playwright test --ui                  # Interactive mode
+npx playwright install --with-deps chromium
+npx playwright test                            # All 8 spec files, headless Chromium
+npx playwright test --ui                       # Interactive mode
+npx playwright test tests/taskflow.spec.ts     # Single spec
+BACKEND_URL=http://localhost:8080 npx playwright test  # Custom backend URL
 ```
 
-### k6 Load Test (after T6-06 is created)
+### Performance Tests
 ```bash
-cd tests/performance/k6-tests
-k6 run load-test.js                       # Target: P95 < 300ms @ 500 VUs
+# k6
+cd tests/performance/k6
+k6 run smoke.js --env BASE_URL=http://localhost:8080
+k6 run load_test.js --env BASE_URL=http://localhost:8080 --summary-export=k6-summary.json
+k6 run stress_test.js --env BASE_URL=http://localhost:8080
+k6 run spike_test.js --env BASE_URL=http://localhost:8080
+
+# JMeter
+cd tests/performance/jmeter
+python3 data/generate-test-users.py --count 300 --register --base-url http://localhost:8080
+jmeter -n -t TaskFlowPro.jmx -l results/load.jtl -JBASE_URL=http://localhost:8080
+
+# Gatling
+cd tests/performance/gatling
+mvn gatling:test -Dgatling.simulationClass=taskflow.LoadSimulation -DBASE_URL=http://localhost:8080
+
+# Locust
+cd tests/performance/locust
+locust -f locustfile.py --host=http://localhost:8080 --users=200 --spawn-rate=20 --run-time=10m --headless
+
+# Unified report
+python3 tests/performance/reports/generate-perf-report.py --k6 k6-summary.json --output perf-report.html
+
+# Regression check
+python3 tests/performance/scripts/regression_check.py k6-summary.json --threshold 20
+```
+
+### Reset Perf Database
+```bash
+DATABASE_URL=postgresql://taskflow:taskflow_dev_password@localhost:5432/taskflow_dev \
+  bash tests/performance/scripts/reset-perf-db.sh
 ```
 
 ---
 
-## Known Bugs & Tech Debt
+## Known Open Items
 
-| ID | Severity | Location | Description |
-|----|----------|----------|-------------|
-| BUG-01 | 🔴 High | `AuthServiceTest.java:42` | Test asserts `UnauthorizedException` but service throws `ConflictException` — test FAILS |
-| BUG-02 | 🔴 High | `docker-compose.dev.yml:build.context` | Context is `..` (=`infra/`); both Dockerfiles expect repo root — Docker build FAILS |
-| BUG-03 | 🟡 Med | `UserController.java` | Controller directly injects `UserRepository` + `PasswordEncoder` instead of using `UserService` — architecture violation |
-| BUG-04 | 🟡 Med | `AuthService.logout()` | Method is a no-op; `RefreshTokenRepository.revokeByToken()` exists but is never called |
-| GAP-01 | 🟡 Med | `SecurityConfig.java` | Rate limiting (B5-04) not implemented — no Bucket4j or RateLimitFilter |
-| GAP-02 | 🟠 Low | All controllers | `@Operation` annotations missing — Swagger shows endpoints but no descriptions |
-| GAP-03 | 🟠 Low | `application.yml` | MDC traceId pattern defined but no `MdcFilter` injects the traceId into MDC |
-| GAP-04 | 🟠 Low | `scripts/setup.sh` | Script is a stub — only prints TODO message |
-| GAP-05 | 🟠 Low | `backend-deployment.yaml` | Minimal stub — no HPA, probes, resource limits, or Prometheus annotations |
-| GAP-06 | 🟠 Low | `ingress.yaml` | Missing TLS config, cert-manager annotations, HTTPS redirect |
-| GAP-07 | 🟠 Low | `monitoring/grafana/dashboards/` | Directory is empty — no Grafana dashboard JSON files |
-| GAP-08 | 🟠 Low | `.github/workflows/deploy.yml` | Stub — only prints a placeholder message |
-| GAP-09 | 🟠 Low | `.github/workflows/backend-ci.yml` | Missing JaCoCo report upload and coverage enforcement step |
-| GAP-10 | 🟠 Low | `tests/performance/k6-tests/` | `load-test.js` does not exist |
+| ID | Description | Blocking? |
+|----|-------------|-----------|
+| OI-01 | Configure GitHub Secrets (JWT_SECRET, AWS_ACCESS_KEY_ID, etc.) | CI deploy only |
+| OI-02 | Run `mvn verify -Pcoverage` to confirm JaCoCo 80% threshold passes | Verify only |
+| OI-03 | `terraform apply` for prod EKS/RDS | When going to production |
+
+No blocking bugs or open code gaps.

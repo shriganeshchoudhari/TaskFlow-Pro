@@ -43,8 +43,11 @@ const renderWithProviders = async (preloadedState = {}) => {
 describe('LoginPage', () => {
   it('renders email and password fields', async () => {
     await renderWithProviders();
-    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+    // Use data-testid to target the specific inputs set in LoginPage.jsx
+    expect(screen.getByTestId('email-input')).toBeInTheDocument();
+    // getByLabelText(/password/i) matches both the input label AND the
+    // 'toggle password visibility' aria-label — use testId instead
+    expect(screen.getByTestId('password-input')).toBeInTheDocument();
   });
 
   it('renders a login button', async () => {

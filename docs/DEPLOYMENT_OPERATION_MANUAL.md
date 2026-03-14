@@ -1,6 +1,6 @@
 # TaskFlow Pro — Deployment & Operations Manual
 
-**Version:** 1.0.0  
+**Version:** 2.0.0 *(updated 2026-03-14 — Phase 7 performance stack added)*  
 **Platform:** AWS EKS | Docker | Kubernetes
 
 ---
@@ -46,71 +46,81 @@ cp frontend/.env.example frontend/.env
 ```bash
 cd backend
 
-# Start only PostgreSQL for local dev
-docker-compose -f docker/docker-compose.dev.yml up -d postgres
+# Start only PostgreSQL (from repo root)
+docker compose -f infra/docker/docker-compose.dev.yml up -d postgres
 
-# Configure backend/.env
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=taskflow_dev
-DB_USERNAME=taskflow
-DB_PASSWORD=taskflow_dev_password
-JWT_SECRET=your-super-secret-key-at-least-256-bits-long-for-hs512
-JWT_EXPIRY_MS=900000
-JWT_REFRESH_EXPIRY_MS=604800000
-SERVER_PORT=8080
-CORS_ALLOWED_ORIGINS=http://localhost:5173
-
-# Run backend
+# Run backend (dev profile — reads application.yml)
 ./mvnw spring-boot:run
 
-# Run tests
-./mvnw test                    # unit tests only
-./mvnw verify                  # unit + integration tests
-./mvnw verify jacoco:report    # with coverage report
+# Run backend (perf profile — HikariCP pool=50, slow-query logging)
+SPRING_PROFILES_ACTIVE=perf ./mvnw spring-boot:run
+
+# Tests
+./mvnw test                     # unit tests only (no DB required)
+./mvnw verify -Pintegration-test # unit + Testcontainers integration tests
+./mvnw verify jacoco:report      # with JaCoCo HTML report (target/site/jacoco/)
+./mvnw verify -Pcoverage         # enforce ≥ 80% line coverage gate
 ```
+
+**Environment variables** (override application.yml defaults):
+
+| Variable | Default (dev) | Production |
+|----------|--------------|------------|
+| `JWT_SECRET` | Base64-encoded 64-char dev string | Set via GitHub Secret / K8s secret |
+| `DB_HOST` | `localhost` | RDS endpoint |
+| `DB_PASSWORD` | `taskflow_dev_password` | Set via K8s secret |
+| `CORS_ALLOWED_ORIGINS` | `http://localhost:5173` | `https://taskflowpro.com` |
+| `SERVER_PORT` | `8080` | `8080` |
 
 ### 1.4 Frontend Setup
 
 ```bash
 cd frontend
-
-# Install dependencies
 npm install
 
-# Configure frontend/.env
-VITE_API_URL=http://localhost:8080/api/v1
-VITE_APP_NAME=TaskFlow Pro
-
-# Start dev server
+# Dev server — proxies /api/* to localhost:8080 (see vite.config.js)
 npm run dev           # http://localhost:5173
 
-# Build for production
-npm run build         # output: dist/
+npm run build         # Production build → dist/
+npm test              # Vitest unit tests
+npm run test:coverage # With V8 coverage report
+npm run lint          # ESLint
+```
 
-# Run tests
-npm run test
-npm run test:coverage
+`frontend/.env` (auto-created by setup.sh, override as needed):
+```env
+VITE_API_URL=http://localhost:8080/api/v1
+VITE_APP_NAME=TaskFlow Pro
 ```
 
 ### 1.5 Full Stack Local (Docker Compose)
 
 ```bash
-# Start entire stack locally
-docker-compose -f docker/docker-compose.dev.yml up --build
+# From repo root:
+docker compose -f infra/docker/docker-compose.dev.yml up --build
 
 # Services started:
 # - PostgreSQL     → localhost:5432
 # - Redis          → localhost:6379
 # - Backend API    → localhost:8080
-# - Frontend       → localhost:5173
+# - Frontend       → localhost:80
 # - Swagger UI     → localhost:8080/swagger-ui.html
 
+# With monitoring (Prometheus + Grafana):
+docker compose -f infra/docker/docker-compose.dev.yml \
+               --profile monitoring up --build
+# Prometheus: localhost:9090  |  Grafana: localhost:3000
+
+# With perf stack (InfluxDB + Grafana-perf):
+docker compose -f infra/docker/docker-compose.dev.yml \
+               -f infra/docker/docker-compose.perf.yml up -d
+# InfluxDB: localhost:8086  |  Grafana-perf: localhost:3001
+
 # Stop services
-docker-compose -f docker/docker-compose.dev.yml down
+docker compose -f infra/docker/docker-compose.dev.yml down
 
 # Stop + remove volumes (fresh start)
-docker-compose -f docker/docker-compose.dev.yml down -v
+docker compose -f infra/docker/docker-compose.dev.yml down -v
 ```
 
 ---
@@ -119,16 +129,17 @@ docker-compose -f docker/docker-compose.dev.yml down -v
 
 ### 2.1 Build Images
 
-```bash
-# Backend
-docker build -t taskflow-backend:latest \
-  --build-arg JAR_FILE=target/taskflow-backend-1.0.0.jar \
-  -f docker/Dockerfile.backend .
+Both Dockerfiles use **repo root** as the build context (`context: ../..` in docker-compose). Always run builds from the repo root:
 
-# Frontend
+```bash
+# Backend (multi-stage: Maven builder → Eclipse Temurin 21 JRE, non-root user)
+docker build -t taskflow-backend:latest \
+  -f infra/docker/dockerfiles/Dockerfile.backend .
+
+# Frontend (multi-stage: Node build → nginx:alpine, SPA fallback)
 docker build -t taskflow-frontend:latest \
   --build-arg VITE_API_URL=https://api.taskflowpro.com/api/v1 \
-  -f docker/Dockerfile.frontend .
+  -f infra/docker/dockerfiles/Dockerfile.frontend .
 
 # Tag for registry
 docker tag taskflow-backend:latest \
@@ -452,31 +463,59 @@ helm upgrade --install prometheus prometheus-community/kube-prometheus-stack \
 
 ### 5.2 Application Metrics
 
-The backend exposes metrics at `/actuator/prometheus`. Key metrics:
+The backend exposes metrics at `/actuator/prometheus` (scraped every 15s). Key metrics:
 
 | Metric | Description |
 |--------|-------------|
-| `http_server_requests_seconds` | API request latency histogram |
-| `jvm_memory_used_bytes` | JVM heap/non-heap usage |
+| `http_server_requests_seconds` | API request latency histogram (P50/P95/P99) |
+| `jvm_memory_used_bytes{area="heap"}` | JVM heap usage |
+| `jvm_gc_pause_seconds_sum` | GC pause time rate |
 | `hikaricp_connections_active` | Active DB connections |
-| `taskflow_tasks_created_total` | Custom: tasks created counter |
-| `taskflow_users_active` | Custom: active users gauge |
+| `hikaricp_connections_pending` | Waiting for connection |
+| `jvm_threads_live_threads` | Live JVM threads |
+| `process_cpu_usage` | Process CPU % |
+
+All metrics are tagged with `application="taskflow-pro"` (set in `application.yml`).
+
+Each request also carries an `X-Trace-Id` header (injected by `MdcTraceIdFilter`) which appears in every structured log line as `"traceId":"<16-char-hex>"` for end-to-end correlation.
 
 ### 5.3 Grafana Dashboards
 
-```bash
-# Access Grafana (port-forward)
-kubectl port-forward svc/prometheus-grafana 3000:80 -n monitoring
+Dashboards auto-provision on Grafana startup — **no manual import needed**:
 
-# Default: admin / prom-operator
-# Import dashboards from monitoring/grafana/dashboards/
+```bash
+# Local Docker stack
+open http://localhost:3000   # admin/admin
+
+# Kubernetes port-forward
+kubectl port-forward svc/prometheus-grafana 3000:80 -n monitoring
 ```
 
-**Available Dashboards:**
-- `taskflow-api-metrics.json` — API latency, error rates, request volume
-- `taskflow-jvm-metrics.json` — JVM memory, GC, threads
-- `taskflow-business-metrics.json` — Tasks created, users active, projects
-- `kubernetes-cluster.json` — Pod health, node resources, HPA status
+**Provisioned dashboards** (`monitoring/grafana/dashboards/`):
+
+| File | Panels | Key Metrics |
+|------|--------|-------------|
+| `taskflow-api.json` | 12 | Request rate, P50/P95/P99 latency, 4xx/5xx error rate, JVM heap/non-heap, GC pause, HikariCP pool, threads, CPU |
+
+**Provisioning config** (`monitoring/grafana/provisioning/`):
+- `datasources/prometheus.yml` — auto-registers Prometheus at `http://prometheus:9090`
+- `dashboards/dashboard.yml` — auto-loads all JSON from `/var/lib/grafana/dashboards`
+
+### 5.4 Performance Monitoring (Phase 7)
+
+For live metrics during performance test runs, start the perf stack:
+
+```bash
+docker compose -f infra/docker/docker-compose.dev.yml \
+               -f infra/docker/docker-compose.perf.yml up -d
+```
+
+This adds:
+- **InfluxDB 2.7** on `:8086` — unified time-series sink
+  - k6: `K6_OUT=influxdb=http://localhost:8086/k6 k6 run load_test.js`
+  - JMeter: Backend Listener → InfluxdbBackendListenerClient
+  - Locust: custom event listener writing to InfluxDB
+- **Grafana-perf** on `:3001` — separate from the main Grafana to avoid port conflict
 
 ### 5.4 Alerting Rules
 

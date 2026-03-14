@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- PT-JM-06 — JMeter 24-hour Soak Test Plan
+     100 steady threads for 24 hours. Detects:
+       - Memory leaks (JVM heap growth over time)
+       - Connection pool exhaustion (HikariCP active > max)
+       - Error rate drift (should stay flat near 0%)
+       - Latency creep (P95 should not increase over time)
+
+     Run: jmeter -n -t Soak_24h.jmx -l results/soak.jtl \
+                 -JBASE_URL=http://localhost:8080 \
+                 -JTHREAD_COUNT=100 \
+                 -JDURATION=86400
+-->
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.3">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="TaskFlow Pro Soak Test (24h)">
+      <stringProp name="TestPlan.comments">PT-JM-06 — 24-hour endurance test at 100 VUs</stringProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments">
+        <collectionProp name="Arguments.arguments">
+          <elementProp name="BASE_URL" elementType="Argument">
+            <stringProp name="Argument.name">BASE_URL</stringProp>
+            <stringProp name="Argument.value">${__P(BASE_URL,http://localhost:8080)}</stringProp>
+          </elementProp>
+          <elementProp name="THREAD_COUNT" elementType="Argument">
+            <stringProp name="Argument.name">THREAD_COUNT</stringProp>
+            <stringProp name="Argument.value">${__P(THREAD_COUNT,100)}</stringProp>
+          </elementProp>
+          <elementProp name="DURATION" elementType="Argument">
+            <stringProp name="Argument.name">DURATION</stringProp>
+            <stringProp name="Argument.value">${__P(DURATION,86400)}</stringProp>
+          </elementProp>
+        </collectionProp>
+      </elementProp>
+    </TestPlan>
+    <hashTree>
+
+      <ConfigTestElement guiclass="HttpDefaultsGui" testclass="ConfigTestElement" testname="HTTP Defaults">
+        <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+        <stringProp name="HTTPSampler.response_timeout">15000</stringProp>
+      </ConfigTestElement>
+      <hashTree/>
+
+      <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="JSON Headers">
+        <collectionProp name="HeaderManager.headers">
+          <elementProp name="Content-Type" elementType="Header">
+            <stringProp name="Header.name">Content-Type</stringProp>
+            <stringProp name="Header.value">application/json</stringProp>
+          </elementProp>
+        </collectionProp>
+      </HeaderManager>
+      <hashTree/>
+
+      <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="Soak Users CSV">
+        <stringProp name="filename">data/users.csv</stringProp>
+        <stringProp name="variableNames">fullName,email,password</stringProp>
+        <boolProp name="ignoreFirstLine">true</boolProp>
+        <stringProp name="delimiter">,</stringProp>
+        <boolProp name="recycle">true</boolProp>
+        <stringProp name="shareMode">shareMode.all</stringProp>
+      </CSVDataSet>
+      <hashTree/>
+
+      <!-- Soak thread group: constant 100 threads for 24 hours -->
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Soak Threads">
+        <stringProp name="ThreadGroup.num_threads">${THREAD_COUNT}</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">120</stringProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.duration">${DURATION}</stringProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController">
+          <boolProp name="LoopController.continue_forever">true</boolProp>
+          <intProp name="LoopController.loops">-1</intProp>
+        </elementProp>
+      </ThreadGroup>
+      <hashTree>
+
+        <!-- Login -->
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST /auth/login">
+          <stringProp name="HTTPSampler.path">/api/v1/auth/login</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <stringProp name="Argument.value">{"email":"${email}","password":"${password}"}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <JSONPathExtractor guiclass="JSONPathExtractorGui" testclass="JSONPathExtractor" testname="Extract token">
+            <stringProp name="JSONPathExtractor.referenceName">access_token</stringProp>
+            <stringProp name="JSONPathExtractor.jsonPathExpr">$.accessToken</stringProp>
+            <stringProp name="JSONPathExtractor.defaultValue">NO_TOKEN</stringProp>
+          </JSONPathExtractor>
+          <hashTree/>
+        </hashTree>
+
+        <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Auth Header">
+          <collectionProp name="HeaderManager.headers">
+            <elementProp name="Authorization" elementType="Header">
+              <stringProp name="Header.name">Authorization</stringProp>
+              <stringProp name="Header.value">Bearer ${access_token}</stringProp>
+            </elementProp>
+          </collectionProp>
+        </HeaderManager>
+        <hashTree/>
+
+        <!-- Steady read/write mix — gentler pace than load test -->
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="GET /projects">
+          <stringProp name="HTTPSampler.path">/api/v1/projects</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree/>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="GET /tasks/my-tasks">
+          <stringProp name="HTTPSampler.path">/api/v1/tasks/my-tasks</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree/>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="GET /notifications">
+          <stringProp name="HTTPSampler.path">/api/v1/notifications</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree/>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="GET /actuator/health">
+          <stringProp name="HTTPSampler.path">/actuator/health</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Health UP">
+            <collectionProp name="Asserion.test_strings"><stringProp name="90">"UP"</stringProp></collectionProp>
+            <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
+            <intProp name="Assertion.test_type">2</intProp>
+          </ResponseAssertion>
+          <hashTree/>
+        </hashTree>
+
+        <!-- Gentle think time for soak — 2–5 s between iterations -->
+        <UniformRandomTimer guiclass="UniformRandomTimerGui" testclass="UniformRandomTimer" testname="Think Time 2-5s">
+          <stringProp name="ConstantTimer.delay">2000</stringProp>
+          <stringProp name="RandomTimer.range">3000</stringProp>
+        </UniformRandomTimer>
+        <hashTree/>
+
+      </hashTree><!-- /ThreadGroup -->
+
+      <!-- Hourly summary snapshots -->
+      <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Soak Summary">
+        <boolProp name="ResultCollector.error_logging">false</boolProp>
+        <stringProp name="filename">results/jmeter/soak.jtl</stringProp>
+      </ResultCollector>
+      <hashTree/>
+
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>

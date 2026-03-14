@@ -1,0 +1,95 @@
+name: Locust CI
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 2 * * 0"   # weekly soak — Sunday 02:00 UTC
+  workflow_dispatch:
+
+jobs:
+  locust-load:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start stack
+        run: docker compose -f infra/docker/docker-compose.dev.yml up -d
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+      - name: Wait for backend
+        run: |
+          for i in $(seq 1 24); do
+            curl -sf http://localhost:8080/actuator/health | grep -q '"UP"' && exit 0; sleep 5
+          done; exit 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Locust
+        run: pip install locust==2.28.0 --break-system-packages
+
+      - name: Run Locust load test (10 min)
+        run: |
+          mkdir -p results/locust
+          locust -f tests/performance/locust/locustfile.py \
+            --host=http://localhost:8080 \
+            --users=200 --spawn-rate=20 --run-time=10m --headless \
+            --html=results/locust/locust-load.html \
+            --csv=results/locust/locust-load
+        working-directory: ${{ github.workspace }}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: locust-load-results
+          path: results/locust/
+
+      - name: Teardown
+        if: always()
+        run: docker compose -f infra/docker/docker-compose.dev.yml down -v
+
+  locust-soak:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start stack
+        run: docker compose -f infra/docker/docker-compose.dev.yml up -d
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+      - name: Wait for backend
+        run: |
+          for i in $(seq 1 24); do
+            curl -sf http://localhost:8080/actuator/health | grep -q '"UP"' && exit 0; sleep 5
+          done; exit 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install locust==2.28.0 --break-system-packages
+
+      - name: Run Locust soak (8 hours)
+        run: |
+          mkdir -p results/locust
+          locust -f tests/performance/locust/soak_locustfile.py \
+            --host=http://localhost:8080 \
+            --users=50 --spawn-rate=5 --run-time=8h --headless \
+            --html=results/locust/locust-soak.html \
+            --csv=results/locust/locust-soak
+        timeout-minutes: 500
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: locust-soak-results
+          path: results/locust/
+
+      - name: Teardown
+        if: always()
+        run: docker compose -f infra/docker/docker-compose.dev.yml down -v

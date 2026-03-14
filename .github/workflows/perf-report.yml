@@ -1,0 +1,63 @@
+name: Perf Report
+
+on:
+  workflow_run:
+    workflows: ["k6 Load Tests", "JMeter CI", "Locust CI"]
+    types: [completed]
+  workflow_dispatch:
+
+jobs:
+  generate-report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download k6 results
+        uses: actions/download-artifact@v4
+        with:
+          name: k6-load-results
+          path: results/k6/
+        continue-on-error: true
+
+      - name: Download JMeter results
+        uses: actions/download-artifact@v4
+        with:
+          name: jmeter-results
+          path: results/jmeter/
+        continue-on-error: true
+
+      - name: Download Locust results
+        uses: actions/download-artifact@v4
+        with:
+          name: locust-load-results
+          path: results/locust/
+        continue-on-error: true
+
+      - name: Generate unified HTML report
+        run: |
+          python tests/performance/reports/generate-perf-report.py \
+            --k6      results/k6/k6-load-summary.json \
+            --jmeter  results/jmeter/load-results.jtl \
+            --locust  results/locust/locust-load_stats.csv \
+            --output  reports/perf-report.html
+        continue-on-error: true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: perf-report
+          path: reports/perf-report.html
+
+      - name: Post PR comment
+        if: github.event.pull_request.number
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER:    ${{ github.event.pull_request.number }}
+        run: |
+          python tests/performance/scripts/regression_check.py \
+            results/k6/k6-load-summary.json \
+            --baseline tests/performance/baselines/perf-baseline.json
+        continue-on-error: true

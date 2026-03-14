@@ -1,6 +1,7 @@
 spring:
   flyway:
     enabled: true
+    repair-on-migrate: true
   jpa:
     hibernate:
       ddl-auto: validate
@@ -8,16 +9,20 @@ spring:
     hikari:
       maximum-pool-size: 5
 
-jwt:
-  secret: dGVzdC1zZWNyZXQta2V5LW11c3QtYmUtYXQtbGVhc3QtNTEyLWJpdHMtbG9uZy1mb3ItaHM1MTItYWxnb3JpdGht
-  access-token-expiry-ms: 900000
-  refresh-token-expiry-ms: 604800000
-
-cors:
-  allowed-origins: http://localhost:5173
+# Integration test overrides — must mirror the app.* namespace from application.yml
+app:
+  jwt:
+    # Base64("test-secret-key-must-be-at-least-512-bits-long-for-hs512-algorithm")
+    secret: dGVzdC1zZWNyZXQta2V5LW11c3QtYmUtYXQtbGVhc3QtNTEyLWJpdHMtbG9uZy1mb3ItaHM1MTItYWxnb3JpdGht
+    access-token-expiry-ms: 900000
+    refresh-token-expiry-ms: 604800000
+  cors:
+    allowed-origins: http://localhost:5173
+    allowed-methods: GET,POST,PUT,PATCH,DELETE,OPTIONS
+    allowed-headers: "*"
+    max-age: 3600
 
 logging:
   level:
     "[com.taskflow]": DEBUG
     "[org.springframework.security]": DEBUG
-

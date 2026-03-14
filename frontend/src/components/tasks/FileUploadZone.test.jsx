@@ -7,7 +7,7 @@ describe('FileUploadZone Component', () => {
     const mockOnUpload = vi.fn();
     render(<FileUploadZone onUpload={mockOnUpload} />);
     
-    expect(screen.getByText(/Drag & drop files here, or click to select/i)).toBeInTheDocument();
+    expect(screen.getByText(/Drag & drop a file here, or click to select a file/i)).toBeInTheDocument();
   });
 
   it('shows uploading state', () => {

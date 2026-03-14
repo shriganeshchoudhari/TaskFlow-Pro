@@ -1,0 +1,39 @@
+# --- Data Sources ---
+sources:
+  local-pg:
+    kind: postgres
+    host: ${DB_HOST:localhost}
+    port: 5432
+    database: ${DB_NAME:taskflow_dev}
+    user: ${DB_USER:postgres}
+    # Using environment variables for secrets is best practice
+    password: ${DB_PASSWORD:postgres} 
+
+# --- Tool Definitions ---
+tools:
+  - name: get_user_by_email
+    kind: postgres-sql
+    source: local-pg
+    description: "Retrieves user details based on an email address."
+    statement: "SELECT id, full_name, email, created_at FROM users WHERE email = $1;"
+    parameters:
+      - name: email
+        type: string
+        description: "The email address of the user to look up."
+
+  - name: list_recent_projects
+    kind: postgres-sql
+    source: local-pg
+    description: "Returns a list of the most recent projects."
+    statement: "SELECT id, name, status, created_at FROM projects ORDER BY created_at DESC LIMIT $1;"
+    parameters:
+      - name: limit
+        type: integer
+        description: "The number of projects to return."
+
+# --- Toolsets (Optional grouping) ---
+toolsets:
+  - name: default
+    tools:
+      - get_user_by_email
+      - list_recent_projects

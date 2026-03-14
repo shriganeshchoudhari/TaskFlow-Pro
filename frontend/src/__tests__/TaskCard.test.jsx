@@ -7,7 +7,6 @@ import tasksReducer from '../store/slices/tasksSlice';
 import uiReducer from '../store/slices/uiSlice';
 import TaskCard from '../components/tasks/TaskCard';
 
-// Mock navigate
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
   return { ...actual, useNavigate: () => vi.fn() };
@@ -15,10 +14,7 @@ vi.mock('react-router-dom', async () => {
 
 const createStore = (preloadedState = {}) =>
   configureStore({
-    reducer: {
-      tasks: tasksReducer,
-      ui: uiReducer,
-    },
+    reducer: { tasks: tasksReducer, ui: uiReducer },
     preloadedState,
   });
 
@@ -51,7 +47,9 @@ describe('TaskCard', () => {
 
   it('renders the priority indicator', () => {
     renderWithProviders({ task: mockTask });
-    expect(screen.getByText(/high/i)).toBeInTheDocument();
+    // Priority is shown via a colored left border (data-priority attribute), not visible text
+    const card = screen.getByTestId(`task-card-${mockTask.id}`);
+    expect(card).toHaveAttribute('data-priority', 'HIGH');
   });
 
   it('renders tag chips', () => {
