@@ -403,6 +403,44 @@ Content-Type: {{contentType}}
 GET {{baseUrl}}/tasks/my-tasks
 Authorization: Bearer {{accessToken}}
 
+### ST-01: Add subtask
+POST {{baseUrl}}/tasks/{{taskId}}/subtasks
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "title": "Write unit tests"
+}
+
+### ST-04: Toggle subtask completion
+# Replace SUBTASK_ID_HERE after running ST-01 and noting the id
+PATCH {{baseUrl}}/subtasks/SUBTASK_ID_HERE/toggle
+Authorization: Bearer {{accessToken}}
+
+### TT-01: Log time on a task
+POST {{baseUrl}}/tasks/{{taskId}}/time
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "hours": 2.5
+}
+
+### AT-01: Upload attachment (multipart)
+# Uncomment and adjust path for manual testing
+# POST {{baseUrl}}/tasks/{{taskId}}/attachments
+# Authorization: Bearer {{accessToken}}
+# Content-Type: multipart/form-data; boundary=boundary
+# --boundary
+# Content-Disposition: form-data; name="file"; filename="test.pdf"
+# Content-Type: application/pdf
+# (binary file content here)
+# --boundary--
+
+### AT-03: List attachments
+GET {{baseUrl}}/tasks/{{taskId}}/attachments
+Authorization: Bearer {{accessToken}}
+
 
 ### =========================================================================
 ### 5. COMMENT ENDPOINTS

@@ -1,9 +1,9 @@
 # TaskFlow Pro — Technical Design Document (TTD)
 
-**Version:** 1.0.0  
-**Date:** 2025-01-01  
+**Version:** 2.0.0 *(updated 2026-03-14 — Phase 6/7 additions: rate limiting, MDC tracing, perf testing stack)*  
+**Date:** 2026-03-14  
 **Author:** Architecture Team  
-**Status:** Approved
+**Status:** Approved — All 7 phases implemented
 
 ---
 
@@ -113,7 +113,7 @@ TaskFlow Pro follows a **Clean Architecture** approach with clear separation of 
 | Frontend SPA | React 18, Vite 5, Redux Toolkit | User interface, state management |
 | REST API | Spring Boot 3.x, Java 21 | Business logic, data access, security |
 | Database | PostgreSQL 16 (AWS RDS) | Persistent data storage |
-| Cache | Redis 7 (AWS ElastiCache) | Token blacklisting, rate limiting |
+| Rate Limiting | Bucket4j (in-process) | Token-bucket rate limiting on auth endpoints (no Redis needed) |
 | Container Runtime | Docker 24 | Application containerization |
 | Orchestration | Kubernetes 1.28 (EKS) | Deployment, scaling, service discovery |
 | Package Manager | Helm 3 | Kubernetes manifest templating |
@@ -126,11 +126,14 @@ TaskFlow Pro follows a **Clean Architecture** approach with clear separation of 
 
 ```
 Frontend (80/443)
-    │── REST API calls ──► Backend API (:8080)
-                              │── JPA/JDBC ──► PostgreSQL (:5432)
-                              │── Lettuce ──► Redis (:6379)
-                              └── Spring Actuator ──► Prometheus (:9090)
-                                                          └── Grafana (:3000)
+    │── REST API / WebSocket (STOMP) ──► Backend API (:8080)
+                                          │── JPA/JDBC ──► PostgreSQL (:5432)
+                                          │── Spring Actuator ──► Prometheus (:9090)
+                                          │                          └── Grafana (:3000)
+                                          └── MdcTraceIdFilter injects traceId into all log lines
+
+Per-request middleware chain (Spring filter order):
+  MdcTraceIdFilter (order 1) → RateLimitFilter (order 2) → JwtAuthFilter → SecurityConfig
 ```
 
 ---
@@ -141,72 +144,78 @@ Frontend (80/443)
 
 ```
 com.taskflow
-├── TaskflowApplication.java          # Main Spring Boot entry point
+├── TaskflowApplication.java            # @SpringBootApplication + @EnableScheduling
 ├── config/
-│   ├── SecurityConfig.java           # Spring Security + JWT filter chain
-│   ├── JwtConfig.java                # JWT properties binding
-│   ├── CorsConfig.java               # CORS configuration
-│   └── OpenApiConfig.java            # Springdoc/Swagger configuration
+│   ├── SecurityConfig.java             # Spring Security + JWT filter chain, CORS, CSRF
+│   ├── WebSocketConfig.java            # STOMP over SockJS at /ws
+│   ├── MdcTraceIdFilter.java           # [Phase 6] Injects X-Trace-Id into MDC + response header
+│   └── RateLimitFilter.java            # [Phase 5] Bucket4j: 10/15min login, 5/hr register
 ├── controller/
-│   ├── AuthController.java           # POST /api/v1/auth/**
-│   ├── UserController.java           # GET/PUT /api/v1/users/**
-│   ├── ProjectController.java        # CRUD /api/v1/projects/**
-│   ├── TaskController.java           # CRUD /api/v1/projects/{id}/tasks/**
-│   ├── CommentController.java        # CRUD /api/v1/tasks/{id}/comments/**
-│   ├── NotificationController.java   # GET /api/v1/notifications/**
-│   └── ActivityController.java       # GET /api/v1/activities/**
+│   ├── AuthController.java             # POST /api/v1/auth/register|login|refresh|logout
+│   ├── UserController.java             # GET/PUT /api/v1/users/me, PUT /users/me/password
+│   ├── ProjectController.java          # CRUD /api/v1/projects/** + /members sub-resource
+│   ├── TaskController.java             # CRUD /api/v1/projects/{id}/tasks + PATCH /status + /my-tasks
+│   ├── CommentController.java          # CRUD /api/v1/tasks/{id}/comments, /comments/{id}
+│   ├── NotificationController.java     # GET /notifications, PATCH read/read-all
+│   ├── ActivityController.java         # GET /projects/{id}/activities, /tasks/{id}/activities
+│   ├── DashboardController.java        # GET /dashboard/summary
+│   └── AttachmentController.java       # POST/GET /tasks/{id}/attachments, GET/DELETE /attachments/{id}
 ├── service/
-│   ├── AuthService.java              # Registration, login, token refresh
-│   ├── UserService.java              # User profile management
-│   ├── ProjectService.java           # Project lifecycle
-│   ├── TaskService.java              # Task CRUD and workflow
-│   ├── CommentService.java           # Comment management
-│   ├── NotificationService.java      # Notification creation and delivery
-│   └── ActivityService.java          # Activity event recording
+│   ├── AuthService.java                # register, login, refreshToken, logout (revokes token)
+│   ├── UserService.java                # getCurrentUser, updateProfile, updatePassword
+│   ├── ProjectService.java             # CRUD, archive, addMember, removeMember, updateRole
+│   ├── TaskService.java                # CRUD, status transitions, subtasks, time tracking
+│   ├── CommentService.java             # add/edit/delete, notifies assignee+reporter
+│   ├── NotificationService.java        # notify*, markAsRead, markAllAsRead, @Scheduled
+│   ├── ActivityService.java            # logActivity, getProjectActivities, getTaskActivities
+│   ├── AttachmentService.java          # interface for file operations
+│   ├── AttachmentServiceImpl.java      # store/retrieve file attachments
+│   ├── StorageService.java             # storage abstraction interface
+│   └── LocalStorageServiceImpl.java    # local filesystem storage (dev)
 ├── repository/
-│   ├── UserRepository.java           # Spring Data JPA user queries
-│   ├── ProjectRepository.java        # Project queries
-│   ├── ProjectMemberRepository.java  # Project membership
-│   ├── TaskRepository.java           # Task queries
-│   ├── CommentRepository.java        # Comment queries
-│   ├── NotificationRepository.java   # Notification queries
-│   └── ActivityRepository.java       # Activity log queries
+│   ├── UserRepository.java             # findByEmail, existsByEmail
+│   ├── ProjectRepository.java          # findAccessibleByUserId (owner OR member)
+│   ├── ProjectMemberRepository.java    # existsByProjectIdAndUserId, findByProjectIdAndUserId
+│   ├── TaskRepository.java             # filters, findDueTomorrow, countByProjectIdAndStatus
+│   ├── CommentRepository.java          # findByTaskIdOrderByCreatedAtAsc
+│   ├── NotificationRepository.java     # markAllReadByUserId, countUnreadByUserId
+│   ├── RefreshTokenRepository.java     # revokeByToken, revokeAllByUserId
+│   ├── ActivityRepository.java         # findByProjectId/TaskId paginated
+│   ├── SubtaskRepository.java          # findByTaskId
+│   └── AttachmentRepository.java       # findByTaskId
 ├── model/
-│   ├── User.java                     # @Entity: users table
-│   ├── Project.java                  # @Entity: projects table
-│   ├── ProjectMember.java            # @Entity: project_members table
-│   ├── Task.java                     # @Entity: tasks table
-│   ├── Comment.java                  # @Entity: comments table
-│   ├── Notification.java             # @Entity: notifications table
-│   ├── Activity.java                 # @Entity: activities table
-│   └── enums/
-│       ├── Role.java                 # ADMIN, MANAGER, MEMBER, VIEWER
-│       ├── TaskStatus.java           # TODO, IN_PROGRESS, REVIEW, DONE
-│       ├── TaskPriority.java         # LOW, MEDIUM, HIGH, CRITICAL
-│       └── ProjectStatus.java        # ACTIVE, ON_HOLD, COMPLETED, ARCHIVED
+│   ├── User.java                       # Role enum: ADMIN|MANAGER|MEMBER|VIEWER
+│   ├── Project.java                    # ProjectStatus + ProjectVisibility enums
+│   ├── ProjectMember.java              # composite PK (project_id, user_id), role
+│   ├── Task.java                       # TaskStatus + TaskPriority enums, tags TEXT[]
+│   ├── Comment.java                    # content, author, task, isEdited
+│   ├── Notification.java               # NotificationType enum, isRead, task/project refs
+│   ├── Activity.java                   # action, entityType, oldValue, newValue, metadata JSONB
+│   ├── RefreshToken.java               # token, expiresAt, isRevoked
+│   ├── Subtask.java                    # title, isCompleted, task FK
+│   └── Attachment.java                 # fileName, contentType, size, storagePath
 ├── dto/
-│   ├── request/
-│   │   ├── LoginRequest.java
-│   │   ├── RegisterRequest.java
-│   │   ├── CreateProjectRequest.java
-│   │   ├── CreateTaskRequest.java
-│   │   └── CreateCommentRequest.java
-│   └── response/
-│       ├── AuthResponse.java
-│       ├── UserResponse.java
-│       ├── ProjectResponse.java
-│       ├── TaskResponse.java
-│       ├── CommentResponse.java
-│       └── NotificationResponse.java
+│   ├── request/   (15 DTOs with Bean Validation)
+│   │   LoginRequest, RegisterRequest, RefreshTokenRequest
+│   │   CreateProject/UpdateProject/AddProjectMember/UpdateMemberRole
+│   │   CreateTask/UpdateTask/UpdateTaskStatus/CreateSubtask/LogTime
+│   │   CreateComment, UpdateProfile, UpdatePassword
+│   └── response/  (13 DTOs)
+│       AuthResponse, UserResponse, ProjectResponse, MemberResponse
+│       TaskResponse, SubtaskResponse, CommentResponse, NotificationResponse
+│       ActivityResponse, DashboardSummaryResponse, AttachmentResponse
+│       PagedResponse, Responses
 ├── security/
-│   ├── JwtTokenProvider.java         # JWT generation and validation
-│   ├── JwtAuthFilter.java            # JWT request filter
-│   └── UserDetailsServiceImpl.java   # Spring Security UserDetails
+│   ├── JwtTokenProvider.java           # HS512 token generation + validation
+│   ├── JwtAuthFilter.java              # OncePerRequestFilter, stateless Bearer
+│   └── UserDetailsServiceImpl.java     # loadByEmail, checks isActive flag
 └── exception/
-    ├── GlobalExceptionHandler.java   # @RestControllerAdvice
-    ├── ResourceNotFoundException.java
-    ├── UnauthorizedException.java
-    └── ValidationException.java
+    ├── GlobalExceptionHandler.java     # @RestControllerAdvice, 400/401/403/404/409/422/429/500
+    ├── ResourceNotFoundException.java  # 404
+    ├── UnauthorizedException.java      # 401
+    ├── ConflictException.java          # 409
+    ├── ForbiddenException.java         # 403
+    └── InvalidStatusTransitionException.java  # 422
 ```
 
 ### 3.2 Layered Architecture
@@ -495,18 +504,23 @@ UI re-renders with new task
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
 | Language | Java 21 | LTS, virtual threads (Project Loom), strong typing |
-| Framework | Spring Boot 3.x | Auto-config, Spring Security, mature ecosystem |
+| Framework | Spring Boot 3.5 | Auto-config, Spring Security, mature ecosystem |
 | Build Tool | Maven 3.9 | Dependency management, consistent enterprise standard |
 | Frontend | React 18 | Concurrent rendering, large ecosystem |
 | Bundler | Vite 5 | Fast HMR, ES modules, better DX |
 | State | Redux Toolkit | Predictable state, DevTools, async thunks |
 | UI Library | Material UI v5 | Comprehensive component library, theming |
-| Database | PostgreSQL 16 | ACID compliance, JSON support, performance |
+| Real-time | WebSocket (STOMP/SockJS) | Task board live updates without polling |
+| Database | PostgreSQL 16 | ACID compliance, TEXT[] for tags, JSONB for metadata |
 | ORM | Hibernate (JPA) | Standard, productive, supports complex queries |
-| Auth | JWT (HS512) | Stateless, scalable, industry standard |
+| Auth | JWT (HS512) | Stateless, scalable — see ADR 0001 |
+| Rate Limiting | Bucket4j (in-process) | No Redis dep, token-bucket per-IP, 429+Retry-After |
+| Tracing | MDC + X-Trace-Id header | End-to-end request correlation across logs |
+| Migration | Flyway | Versioned SQL, repair-on-migrate, V1–V12 applied |
 | IaC | Terraform | Cloud-agnostic, strong AWS provider, GitOps ready |
-| Orchestration | Kubernetes | Industry standard, EKS managed service |
-| Monitoring | Prometheus+Grafana | Open source, powerful, widely adopted |
+| Orchestration | Kubernetes (EKS) | Industry standard, HPA min2/max10 |
+| Monitoring | Prometheus + Grafana | Auto-provisioned dashboards, 12 panels |
+| Perf Testing | k6 + JMeter + Gatling + Locust | 4 tools × 4 test types, InfluxDB sink — see Phase 7 |
 
 ---
 

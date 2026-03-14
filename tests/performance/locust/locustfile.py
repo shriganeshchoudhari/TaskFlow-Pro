@@ -20,10 +20,6 @@ Run (spike — fast burst):
 import random
 import uuid
 from locust import HttpUser, between, task, events
-from tasks.auth_tasks    import AuthTaskSet
-from tasks.project_tasks import ProjectTaskSet
-from tasks.task_tasks    import TaskTaskSet
-from tasks.notif_tasks   import NotifTaskSet
 
 
 class TaskFlowUser(HttpUser):

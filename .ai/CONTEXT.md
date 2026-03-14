@@ -33,19 +33,20 @@ TaskFlow Pro is an enterprise-grade collaborative task management platform — *
 
 ## Source-of-Truth Docs
 
-| Doc | Path |
-|-----|------|
-| Product requirements | `docs/PRD.md` |
-| Technical design | `docs/TTD.md` |
-| API documentation | `docs/API_DOCUMENTATION.md` |
-| Database schema | `docs/DATABASE_SCHEMA.md` |
-| UI/UX specification | `docs/UI_UX_SPECIFICATION.md` |
-| Security & compliance | `docs/SECURITY_COMPLIANCE.md` |
-| Test plan | `docs/TEST_PLAN.md` |
-| API test cases | `docs/TEST_CASES_API.md` |
-| E2E test cases | `docs/TEST_CASES_E2E.md` |
-| Deployment & ops | `docs/DEPLOYMENT_OPERATION_MANUAL.md` |
-| Implementation status | `docs/IMPLEMENTATION_STATUS.md` |
+| Doc | Path | Version |
+|-----|------|---------|
+| Product requirements | `docs/PRD.md` | 1.0 |
+| Technical design | `docs/TTD.md` | 1.0 |
+| API documentation | `docs/API_DOCUMENTATION.md` | **2.0** — Dashboard + trace ID + subtasks/attachments |
+| Database schema | `docs/DATABASE_SCHEMA.md` | **2.0** — V10–V12 + Flyway settings |
+| Technical design | `docs/TTD.md` | **2.0** — Package structure + tech stack updated |
+| Security & compliance | `docs/SECURITY_COMPLIANCE.md` | **2.0** — Rate limiting + MDC tracing documented |
+| Test plan | `docs/TEST_PLAN.md` | **2.0** — Phase 7 perf testing added |
+| API test cases | `docs/TEST_CASES_API.md` | **2.0** — Subtasks/time/attachments added |
+| E2E test cases | `docs/TEST_CASES_E2E.md` | **2.0** — Spec files + global-setup documented |
+| UI/UX specification | `docs/UI_UX_SPECIFICATION.md` | 1.0 |
+| Deployment & ops | `docs/DEPLOYMENT_OPERATION_MANUAL.md` | **2.0** |
+| Implementation status | `docs/IMPLEMENTATION_STATUS.md` | **2.0** |
 | AI dev-kit | `.ai/` (repo map, checklists, ADRs, workflows) |
 
 ---

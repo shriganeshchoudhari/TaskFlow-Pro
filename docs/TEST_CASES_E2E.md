@@ -1,10 +1,26 @@
 # TaskFlow Pro — Test Cases: E2E
 
-**Version:** 1.0.0  
-**Tool:** Playwright 1.40  
+**Version:** 2.0.0 *(updated 2026-03-14 — spec files updated, global-setup, 8 spec files)*  
+**Tool:** Playwright 1.40+  
 **Config:** `tests/e2e/playwright/playwright.config.ts`  
-**Browser:** Chromium (default) + Firefox (auth suite)  
+**Browser:** Chromium (headless in CI, configurable locally)  
 **Implementation Task:** T6-05
+
+---
+
+## Test Files
+
+| Spec File | Suites | Description |
+|-----------|--------|-------------|
+| `tests/taskflow.spec.ts` | Auth (5) · Projects (2) · Tasks (2) · Notifications (3) | Core flows |
+| `tests/tasks.spec.ts` | Tasks | Task CRUD + status transitions |
+| `tests/projects.spec.ts` | Projects | Project CRUD + member management |
+| `tests/dashboard.spec.ts` | Dashboard | Stat cards + widget links |
+| `tests/notifications.spec.ts` | Notifications | Bell · dropdown · mark-all-read |
+| `tests/profile.spec.ts` | Profile | Edit name + change password |
+| `tests/responsive.spec.ts` | Responsive | Mobile viewport · drawer · board scroll |
+| `tests/advanced-features.spec.ts` | Advanced | Subtasks · time tracking · file uploads |
+| `full-journey.spec.js` | Journey | Complete user journey (CI gate) |
 
 ---
 
@@ -12,31 +28,48 @@
 
 ```bash
 cd tests/e2e/playwright
-npm ci
-npx playwright install --with-deps
+npm install
+npx playwright install --with-deps chromium
 
-# Run all tests (headless)
+# Requires running backend + frontend stack first:
+docker compose -f infra/docker/docker-compose.dev.yml up -d
+# OR: ./mvnw spring-boot:run + npm run dev in separate terminals
+
+# global-setup.ts polls /actuator/health before any test runs
+# and seeds the e2e-test@taskflow.com user automatically
+
+# Run all specs (headless)
 npx playwright test
 
-# Run with UI mode
+# Run with UI mode (interactive)
 npx playwright test --ui
 
-# Run specific suite
-npx playwright test --grep "Authentication"
+# Run specific spec file
+npx playwright test tests/taskflow.spec.ts
 
-# Run on mobile viewport
-npx playwright test --project="Mobile Chrome"
+# Run against Docker stack (production-like)
+PLAYWRIGHT_BASE_URL=http://localhost:80 npx playwright test
 
-# Debug single test
-npx playwright test taskflow.spec.ts --debug
+# Run against custom backend
+BACKEND_URL=http://localhost:8080 npx playwright test
+
+# Debug a single test
+npx playwright test --debug tests/tasks.spec.ts
+
+# HTML report
+npx playwright test --reporter=html && npx playwright show-report
 ```
 
 **Environment variables:**
 ```
-E2E_BASE_URL=http://localhost:5173       # local dev
-E2E_API_URL=http://localhost:8080/api/v1
-E2E_TEST_EMAIL=e2e-test@taskflow.local
-E2E_TEST_PASSWORD=E2eTest@1234
+PLAYWRIGHT_BASE_URL=http://localhost:5173   # frontend URL (default)
+BACKEND_URL=http://localhost:8080            # backend URL (used by global-setup)
+```
+
+**Pre-seeded test user** (created by `global-setup.ts` before every run):
+```
+email:    e2e-test@taskflow.com
+password: TestPass123!
 ```
 
 ---

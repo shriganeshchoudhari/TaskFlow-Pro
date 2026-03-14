@@ -1,3 +1,4 @@
 {
-    "docwriter.style": "Javadoc"
+    "docwriter.style": "Javadoc",
+    "postman.settings.dotenv-detection-notification-visibility": false
 }

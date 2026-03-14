@@ -1,6 +1,6 @@
 # TaskFlow Pro — Test Cases: API
 
-**Version:** 1.0.0  
+**Version:** 2.0.0 *(updated 2026-03-14 — Subtasks, Time Tracking, Attachments, traceId tests added)*  
 **Tool:** Postman + Newman  
 **Collection:** `tests/api/postman/TaskflowPro.postman_collection.json`
 
@@ -146,6 +146,44 @@ commentId: (set by Comments/Create test)
 | AC-03 | Task creation logged | Create task then GET /tasks/{id}/activities | — | TASK_CREATED entry present | B4-14 |
 | AC-04 | Status change logged | PATCH status then GET activities | — | TASK_STATUS_CHANGED with old+new value | B4-14 |
 | AC-05 | Comment logged | POST comment then GET activities | — | COMMENT_ADDED entry present | B4-14 |
+
+---
+
+## Subtask Endpoint Tests (Phase 3 — V11 migration)
+
+| # | Test | Method + Path | Input | Expected | Task |
+|---|------|--------------|-------|----------|------|
+| ST-01 | Add subtask | POST /tasks/{id}/subtasks | { title: "Write tests" } | 201 + subtask (isCompleted=false) | B3-09 |
+| ST-02 | Add subtask — empty title | POST /tasks/{id}/subtasks | { title: "" } | 400 validation error | B3-09 |
+| ST-03 | Add subtask — non-member | POST /tasks/{id}/subtasks | non-member token | 403 NOT_PROJECT_MEMBER | B3-04 |
+| ST-04 | Toggle subtask (complete) | PATCH /subtasks/{id}/toggle | valid member token | 200 + isCompleted=true | B3-09 |
+| ST-05 | Toggle subtask again (uncomplete) | PATCH /subtasks/{id}/toggle | valid member token | 200 + isCompleted=false | B3-09 |
+| ST-06 | Delete subtask | DELETE /subtasks/{id} | member token | 204 No Content | B3-09 |
+
+---
+
+## Time Tracking Endpoint Tests (Phase 3 — V11 migration)
+
+| # | Test | Method + Path | Input | Expected | Task |
+|---|------|--------------|-------|----------|------|
+| TT-01 | Log time | POST /tasks/{id}/time | { hours: 2.5 } | 200 + task with loggedHours=2.5 | B3-09 |
+| TT-02 | Log more time | POST /tasks/{id}/time | { hours: 1.0 } (second call) | 200 + loggedHours=3.5 (cumulative) | B3-09 |
+| TT-03 | Log time — invalid hours | POST /tasks/{id}/time | { hours: -1 } | 400 validation error | B3-09 |
+| TT-04 | Log time — non-member | POST /tasks/{id}/time | non-member token | 403 NOT_PROJECT_MEMBER | B3-04 |
+
+---
+
+## Attachment Endpoint Tests (Phase 3 — V10 migration)
+
+| # | Test | Method + Path | Input | Expected | Task |
+|---|------|--------------|-------|----------|------|
+| AT-01 | Upload attachment | POST /tasks/{id}/attachments | multipart/form-data file part | 201 + attachment (id, fileName, fileSize, storageUrl) | B3-09 |
+| AT-02 | Upload — non-member | POST /tasks/{id}/attachments | non-member token | 403 NOT_PROJECT_MEMBER | B3-04 |
+| AT-03 | List attachments | GET /tasks/{id}/attachments | valid member token | 200 + list of attachment objects | B3-09 |
+| AT-04 | Download attachment | GET /attachments/{id}/download | valid member token | 200 + file stream with Content-Type header | B3-09 |
+| AT-05 | Delete attachment | DELETE /attachments/{id} | uploader token | 204 No Content | B3-09 |
+| AT-06 | Delete attachment — non-uploader | DELETE /attachments/{id} | different member token | 403 ACCESS_DENIED | B3-09 |
+| AT-07 | Delete attachment — MANAGER can | DELETE /attachments/{id} | project MANAGER token | 204 No Content | B3-09 |
 
 ---
 

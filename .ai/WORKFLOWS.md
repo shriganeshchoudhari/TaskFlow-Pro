@@ -1,5 +1,7 @@
 # Development Workflows
 
+> **All 7 phases complete.** Use these workflows for ongoing maintenance and new features.
+
 ---
 
 ## Phase Implementation Workflow
@@ -27,7 +29,7 @@ Follow this order for every phase. Backend and frontend can run in parallel once
 2. **Technical approach** — update `docs/TTD.md` if architecture changes
 3. **Database**
    - Add Flyway migration SQL under `backend/src/main/resources/db/migration/`
-   - Follow naming: `V{n}__{description}.sql` (next number after V9)
+   - Follow naming: `V{n}__{description}.sql` (**next number after V12**)
    - Update `docs/DATABASE_SCHEMA.md`
 4. **Backend**
    - `model/` → `repository/` → `service/` → `controller/` → `dto/`
@@ -150,6 +152,44 @@ Pattern for every new feature slice:
 
 ---
 
+## Performance Test Workflow
+
+When adding or modifying a performance test:
+
+```
+1. Seed test data (idempotent)
+   psql $DATABASE_URL -f tests/performance/scripts/seed-perf-data.sql
+
+2. Run smoke first to verify basic connectivity
+   cd tests/performance/k6 && k6 run smoke.js --env BASE_URL=http://localhost:8080
+
+3. Run the new/modified test
+   k6 run my_test.js --env BASE_URL=http://localhost:8080 \
+                     --summary-export=results/k6-summary.json
+
+4. Compare against baseline
+   python3 scripts/regression_check.py results/k6-summary.json
+
+5. If thresholds pass and this is a new baseline:
+   - Update tests/performance/baselines/perf-baseline.json with new P95 values
+
+6. Wire the script into the appropriate GitHub Actions workflow:
+   - Smoke/load → .github/workflows/k6-load.yml
+   - JMeter → .github/workflows/jmeter-ci.yml
+   - Locust → .github/workflows/locust-ci.yml
+
+7. Update tests/performance/README.md with run instructions
+```
+
+**Performance test naming (k6):**
+- `smoke.js` — 5 VU · 30s · verify API up (runs on every PR)
+- `load_test.js` — ramp to 500 VU, hold (runs on every main merge)
+- `stress_test.js` — ramp until failure (weekly)
+- `spike_test.js` — sudden burst + recovery (weekly)
+- `{feature}_scenario.js` — realistic multi-step user journey
+
+---
+
 ## PR Naming Conventions
 
 ```
@@ -157,6 +197,7 @@ feat:  B1-06 JwtTokenProvider — access + refresh token generation
 feat:  F2-03 ProjectListPage with status filter and search
 fix:   B3-07 TaskService — allow REVIEW → TODO back-transition
 test:  T6-02 TaskService unit tests — status transition coverage
+perf:  PT-K6-06 board scenario — end-to-end load test
 docs:  update API_DOCUMENTATION with dashboard/summary endpoint
 chore: D6-01 finalize backend Dockerfile with non-root user + HEALTHCHECK
 ci:    CI6-01 backend-ci.yml — add JaCoCo coverage gate

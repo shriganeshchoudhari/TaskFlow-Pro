@@ -1,9 +1,11 @@
 # TaskFlow Pro — API Documentation
 
-**Version:** 1.0.0  
+**Version:** 2.0.0 *(updated 2026-03-14 — Dashboard, My Tasks, Subtasks, Attachments, Time Tracking added)*  
 **Base URL:** `https://api.taskflowpro.com/api/v1`  
+**Local Dev:** `http://localhost:8080/api/v1`  
+**Interactive Docs:** `http://localhost:8080/swagger-ui.html`  
 **Format:** JSON  
-**Auth:** Bearer JWT Token
+**Auth:** Bearer JWT Token (HS512, 15-min access / 7-day refresh)
 
 ---
 
@@ -16,8 +18,9 @@
 6. [Comment Endpoints](#6-comment-endpoints)
 7. [Notification Endpoints](#7-notification-endpoints)
 8. [Activity Endpoints](#8-activity-endpoints)
-9. [Error Handling](#9-error-handling)
-10. [Rate Limiting](#10-rate-limiting)
+9. [Dashboard Endpoints](#9-dashboard-endpoints)
+10. [Error Handling](#10-error-handling)
+11. [Rate Limiting](#11-rate-limiting)
 
 ---
 
@@ -591,9 +594,11 @@ Uploads a file attachment to the task. (Multipart request)
   "fileType": "application/pdf",
   "fileSize": 1048576,
   "storageUrl": "/uploads/document.pdf",
-  "createdAt": "2025-01-14T10:00:00Z"
+  "createdAt": "2026-03-14T10:00:00Z"
 }
 ```
+
+> **Note:** `storageUrl` is a local filesystem path in dev (`/uploads/...`) and an S3 pre-signed URL in production.
 
 ---
 
@@ -790,9 +795,49 @@ Returns activity history for a specific task.
 
 ---
 
-## 9. Error Handling
+## 9. Dashboard Endpoints
+
+### GET /dashboard/summary
+
+🔒 *Requires Authentication*
+
+Returns all summary data for the current user's dashboard in a single aggregated query.
+
+**Response 200:**
+```json
+{
+  "myTaskCounts": {
+    "TODO": 4,
+    "IN_PROGRESS": 2,
+    "REVIEW": 1,
+    "DONE": 12
+  },
+  "dueThisWeek": 3,
+  "activeProjects": 5,
+  "unreadNotifCount": 7
+}
+```
+
+---
+
+### GET /tasks/my-tasks
+
+🔒 *Requires Authentication*
+
+Convenience endpoint returning tasks assigned to the current user across all projects.
+
+**Query Parameters:** `page`, `size`, `status`, `priority`, `sort`
+
+**Response 200:** Paginated task list (same structure as `/projects/{id}/tasks`)
+
+---
+
+## 10. Error Handling
 
 ### Standard Error Response
+
+Every error response includes a `traceId` that matches the `X-Trace-Id` response header.
+Use this ID to find the corresponding backend log entries.
 
 ```json
 {
@@ -810,10 +855,14 @@ Returns activity history for a specific task.
     }
   ],
   "path": "/api/v1/auth/register",
-  "timestamp": "2025-01-15T10:30:00Z",
-  "traceId": "abc123xyz"
+  "timestamp": "2026-03-14T10:30:00Z",
+  "traceId": "a3f92c81b4d07e15"
 }
 ```
+
+**`X-Trace-Id` header** is present in every response (success and error). It is either
+propagated from an upstream `X-Trace-Id` request header or auto-generated as a 16-char hex ID
+by `MdcTraceIdFilter`. Use it to correlate frontend requests with backend logs.
 
 ### HTTP Status Codes
 
@@ -846,7 +895,7 @@ Returns activity history for a specific task.
 
 ---
 
-## 10. Rate Limiting
+## 11. Rate Limiting
 
 | Endpoint Group | Limit | Window |
 |----------------|-------|--------|

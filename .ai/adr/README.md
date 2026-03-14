@@ -11,10 +11,12 @@ Use ADRs to record significant decisions that affect architecture, technology ch
 
 ## Index
 
-| # | Title | Status | Affects |
-|---|-------|--------|---------|
-| [0001](0001-jwt-hs512-authentication.md) | JWT HS512 for Authentication | Accepted | `security/`, `B1-06–B1-09` |
-| [0002](0002-postgresql-flyway-migrations.md) | PostgreSQL + Flyway for DB & Migrations | Accepted | `db/migration/`, `B1-01–B1-02`, `B2-01–B2-02`, `B3-01`, `B4-01`, `B4-06`, `B4-12` |
+| # | Title | Status | Phase | Affects |
+|---|-------|--------|-------|---------|
+| [0001](0001-jwt-hs512-authentication.md) | JWT HS512 for Authentication | Accepted | 1 | `security/`, `B1-06–B1-09` |
+| [0002](0002-postgresql-flyway-migrations.md) | PostgreSQL + Flyway for DB & Migrations | Accepted | 1 | `db/migration/`, V1–V12, all migration tasks |
+| [0003](0003-bucket4j-rate-limiting.md) | Bucket4j for In-Process Rate Limiting | Accepted | 5 | `config/RateLimitFilter.java`, B5-04 |
+| [0004](0004-performance-testing-strategy.md) | Four-Tool Performance Testing Strategy | Accepted | 7 | `tests/performance/`, all PT-* tasks |
 
 ## When to Write an ADR
 
@@ -24,4 +26,4 @@ Write an ADR when the decision:
 - Would be costly or risky to reverse later
 - Other developers would reasonably ask "why did we do it this way?"
 
-Examples: choosing a caching strategy, switching from polling to WebSockets, adopting a new testing framework, changing deployment target.
+Examples: choosing a caching strategy, switching from polling to WebSockets, adopting a new testing framework, changing deployment target, choosing a rate limiting approach.

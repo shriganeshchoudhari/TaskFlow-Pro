@@ -1,8 +1,9 @@
 # TaskFlow Pro — Database Schema
 
-**Version:** 1.0.0  
+**Version:** 2.0.0 *(updated 2026-03-14 — V10 attachments, V11 subtasks+time-tracking, V12 seed data)*  
 **Database:** PostgreSQL 16  
-**ORM:** Hibernate / JPA
+**ORM:** Hibernate / JPA  
+**Migration tool:** Flyway (repair-on-migrate + baseline-on-migrate enabled)
 
 ---
 
@@ -228,14 +229,14 @@ CREATE TABLE subtasks (
 
 ```sql
 CREATE TABLE attachments (
-    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    task_id       UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
-    uploader_id   UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
-    file_name     VARCHAR(500) NOT NULL,
-    file_type     VARCHAR(100) NOT NULL,
-    storage_path  TEXT NOT NULL,
-    file_size     BIGINT NOT NULL,
-    created_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    id           UUID PRIMARY KEY,
+    task_id      UUID         NOT NULL REFERENCES tasks(id)  ON DELETE CASCADE,
+    uploader_id  UUID         NOT NULL REFERENCES users(id)  ON DELETE CASCADE,
+    file_name    VARCHAR(255) NOT NULL,
+    file_type    VARCHAR(100) NOT NULL,
+    file_size    BIGINT       NOT NULL,
+    storage_url  VARCHAR(1000) NOT NULL,   -- local path in dev; S3 URL in prod
+    created_at   TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
@@ -339,19 +340,26 @@ Migrations are managed using **Flyway** with versioned SQL scripts:
 
 ```
 backend/src/main/resources/db/migration/
-├── V1__create_users_table.sql
-├── V2__create_projects_table.sql
-├── V3__create_project_members_table.sql
-├── V4__create_tasks_table.sql
-├── V5__create_comments_table.sql
-├── V6__create_notifications_table.sql
-├── V7__create_activities_table.sql
-├── V8__create_refresh_tokens_table.sql
-└── V9__create_indexes.sql
+├── V1__create_users_table.sql           ← UUID PK, email UNIQUE, role, is_active
+├── V2__create_projects_table.sql        ← status, visibility, owner_id FK
+├── V3__create_project_members_table.sql ← composite UNIQUE (project_id, user_id), role
+├── V4__create_tasks_table.sql           ← status, priority, tags[], assignee/reporter FK
+├── V5__create_comments_table.sql        ← task_id FK, author_id FK, is_edited
+├── V6__create_notifications_table.sql   ← type, is_read, partial index on unread
+├── V7__create_activities_table.sql      ← action, entity_type, old/new_value, metadata JSONB
+├── V8__create_refresh_tokens_table.sql  ← token UNIQUE, expires_at, is_revoked
+├── V9__create_indexes.sql               ← composite + partial indexes
+├── V10__create_attachments_table.sql    ← file_name, file_type, storage_path, file_size
+├── V11__create_subtasks_time_tracking.sql ← subtasks table + estimated_hours/logged_hours on tasks
+└── V12__seed_test_data.sql              ← 10 users, 3 projects, 10 tasks, comments (dev only)
 ```
+
+**Next migration number:** V13
 
 Migration principles:
 - Scripts are **immutable** once applied to any environment
-- Backward-compatible changes preferred (additive: add columns, not drop)
+- Prefer **additive** changes (add columns/tables); never drop in the same migration
 - Breaking changes handled with transitional migration steps
-- Flyway baseline applied to existing production databases
+- `repair-on-migrate: true` in application.yml auto-repairs failed checksum states
+- `baseline-on-migrate: true` handles existing databases without migration history
+- Always test on a fresh DB: `docker compose ... down -v && up postgres && mvnw spring-boot:run`

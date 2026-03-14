@@ -1,8 +1,8 @@
 # TaskFlow Pro — Security & Compliance
 
-**Version:** 1.0.1  
+**Version:** 2.0.0 *(updated 2026-03-14 — rate limiting implementation, MDC tracing, Phase 6/7 controls)*  
 **Framework:** OWASP Top 10 (2021), GDPR  
-**Reviewed:** 2026-03-12
+**Reviewed:** 2026-03-14
 
 ---
 
@@ -72,10 +72,12 @@ Logout ────────────────────────�
 
 ### 1.4 Brute Force Protection
 
-- Login endpoint: max **10 attempts per 15 minutes** per IP
+- Login endpoint: max **10 attempts per 15 minutes** per IP — enforced by `RateLimitFilter.java` (Bucket4j token bucket, per-IP `ConcurrentHashMap`)
+- Register endpoint: max **5 attempts per 1 hour** per IP — same filter
+- Both endpoints return HTTP 429 with `retryAfter` seconds in the JSON body and `Retry-After` header
+- Respects `X-Forwarded-For` and `X-Real-IP` when behind a reverse proxy
 - Account lockout: after 5 consecutive failed logins, account locked for 30 minutes
 - CAPTCHA integration point available (v1.1)
-- Rate limiting via Spring Boot + Redis counter
 
 ---
 
@@ -141,9 +143,9 @@ public TaskResponse updateTask(UUID taskId, UpdateTaskRequest request) { ... }
 
 ### A03 — Injection ✅
 - All database queries use JPA/Hibernate parameterized queries — no raw string concatenation
-- `@Valid` on all controller request bodies (Bean Validation)
+- `@Valid` on all controller request bodies (Bean Validation annotations on every DTO)
 - Spring Security CSRF protection enabled for state-changing requests
-- Input sanitized to prevent stored XSS in text fields (using Jsoup for HTML content)
+- Input sanitized to prevent stored XSS in text fields
 
 ### A04 — Insecure Design ✅
 - Threat modeling conducted during design phase (see TTD.md)
@@ -294,7 +296,7 @@ Secrets:
 
 ```
 ✓ User login (success + failure with reason)
-✓ User logout
+✓ User logout (refresh token revoked in DB)
 ✓ Token refresh
 ✓ Authorization denial (403) with resource details
 ✓ Password change
@@ -302,7 +304,12 @@ Secrets:
 ✓ Admin privilege escalation
 ✓ Project member added/removed
 ✓ Task deletion
+✓ Rate limit exceeded (429) — logged with IP address
 ```
+
+Every log line includes a `traceId` (16-char hex) injected by `MdcTraceIdFilter.java`.
+The same `traceId` is returned in the `X-Trace-Id` response header and included in all error
+response bodies, enabling end-to-end correlation between frontend requests and backend logs.
 
 ### 7.2 Security Alerts (Grafana)
 
