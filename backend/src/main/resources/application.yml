@@ -33,7 +33,7 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
-    repair-on-migrate: true   # auto-repairs any previously-failed migration checksum
+    # repair-on-migrate: true   # auto-repairs any previously-failed migration checksum
     locations: classpath:db/migration
 
 server:

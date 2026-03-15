@@ -39,6 +39,7 @@ com\taskflow\model\Activity$ActivityBuilder.class
 com\taskflow\dto\response\MemberResponse.class
 com\taskflow\repository\ActivityRepository.class
 com\taskflow\model\Comment$CommentBuilder.class
+com\taskflow\config\RateLimitFilter$BucketFactory.class
 com\taskflow\dto\response\SubtaskResponse$SubtaskResponseBuilder.class
 com\taskflow\model\Task.class
 com\taskflow\repository\RefreshTokenRepository.class
@@ -54,6 +55,7 @@ com\taskflow\model\Task$TaskPriority.class
 com\taskflow\service\ActivityService.class
 com\taskflow\dto\response\NotificationResponse.class
 com\taskflow\security\JwtAuthFilter.class
+com\taskflow\config\RateLimitFilter.class
 com\taskflow\model\Project$ProjectStatus.class
 com\taskflow\dto\response\ErrorResponse$FieldError.class
 com\taskflow\service\AttachmentService.class
@@ -114,5 +116,4 @@ com\taskflow\config\SecurityConfig.class
 com\taskflow\model\Attachment$AttachmentBuilder.class
 com\taskflow\service\TaskService.class
 com\taskflow\dto\response\MemberResponse$MemberResponseBuilder.class
-com\taskflow\filter\RateLimitFilter.class
 com\taskflow\model\Project$ProjectBuilder.class

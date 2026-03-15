@@ -1,4 +1,5 @@
 {
     "docwriter.style": "Javadoc",
-    "postman.settings.dotenv-detection-notification-visibility": false
+    "postman.settings.dotenv-detection-notification-visibility": false,
+    "java.compile.nullAnalysis.mode": "disabled"
 }

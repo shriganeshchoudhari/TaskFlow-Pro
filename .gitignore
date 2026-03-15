@@ -97,3 +97,22 @@ monitoring/prometheus/data/
 *.tmp
 *.bak
 *.orig
+# add .agent to ignore any files related to AI agents
+.agent/
+.claude/
+.codebuddy/
+.codeium/
+.copilot/
+.huggingface/   
+.openai/
+.codex/
+.continue/
+.cursor/
+.gemini/
+.github/
+.kiro/
+.opencode/
+.qoder/
+.roo/
+.trae/
+.windsurf/
