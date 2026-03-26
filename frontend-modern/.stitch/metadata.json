@@ -1,0 +1,47 @@
+{
+  "name": "projects/13625448372755094853",
+  "projectId": "13625448372755094853",
+  "title": "TaskFlow Pro Modern",
+  "visibility": "PRIVATE",
+  "createTime": "2026-03-26T08:11:05.811876Z",
+  "updateTime": "2026-03-26T11:23:26.001801Z",
+  "projectType": "PROJECT_DESIGN",
+  "origin": "STITCH",
+  "deviceType": "DESKTOP",
+  "designTheme": {
+    "colorMode": "DARK",
+    "font": "MANROPE",
+    "roundness": "ROUND_FOUR",
+    "customColor": "#0062FF",
+    "headlineFont": "MANROPE",
+    "bodyFont": "INTER",
+    "labelFont": "INTER",
+    "saturation": 3
+  },
+  "screens": {
+    "login": {
+      "id": "67360571ba5a4952831c16a780fd1955",
+      "sourceScreen": "projects/13625448372755094853/screens/67360571ba5a4952831c16a780fd1955",
+      "title": "TaskFlow Pro Login",
+      "width": 2560,
+      "height": 2048
+    },
+    "dashboard": {
+      "id": "511fcebd5f2e424da041394c8a4921e3",
+      "sourceScreen": "projects/13625448372755094853/screens/511fcebd5f2e424da041394c8a4921e3",
+      "title": "TaskFlow Pro Dashboard",
+      "width": 2560,
+      "height": 2048
+    },
+    "kanban": {
+      "id": "4d556ed94dd94a11b7dfe28c4f0cf8f7",
+      "sourceScreen": "projects/13625448372755094853/screens/4d556ed94dd94a11b7dfe28c4f0cf8f7",
+      "title": "TaskFlow Pro Kanban Board",
+      "width": 3072,
+      "height": 2048
+    }
+  },
+  "metadata": {
+    "userRole": "OWNER"
+  }
+}

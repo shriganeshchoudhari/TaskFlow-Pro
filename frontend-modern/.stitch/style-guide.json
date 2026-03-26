@@ -1,0 +1,67 @@
+{
+  "theme": {
+    "colors": {
+      "primary": "#005dac",
+      "primary-container": "#1976d2",
+      "secondary": "#475f84",
+      "secondary-container": "#bad3fd",
+      "error": "#ba1a1a",
+      "error-container": "#ffdad6",
+      "background": "#f8f9fb",
+      "surface": "#f8f9fb",
+      "surface-container-low": "#f2f4f6",
+      "surface-container": "#eceef0",
+      "surface-container-high": "#e6e8ea",
+      "surface-container-highest": "#e0e3e5",
+      "surface-container-lowest": "#ffffff",
+      "surface-bright": "#f8f9fb",
+      "on-surface": "#191c1e",
+      "on-surface-variant": "#414752",
+      "on-primary": "#ffffff",
+      "on-secondary": "#ffffff",
+      "outline": "#717783",
+      "outline-variant": "#c1c6d4",
+      "inverse-surface": "#2d3133",
+      "inverse-on-surface": "#eff1f3",
+      "task-status": {
+        "todo": "#757575",
+        "in-progress": "#1565C0",
+        "review": "#F57F17",
+        "done": "#2E7D32"
+      },
+      "task-priority": {
+        "low": "#388E3C",
+        "medium": "#F57C00",
+        "high": "#E53935",
+        "critical": "#880E4F"
+      }
+    },
+    "typography": {
+      "headline": ["Manrope", "sans-serif"],
+      "body": ["Inter", "sans-serif"],
+      "label": ["Inter", "sans-serif"],
+      "icons": "Material Symbols Outlined"
+    },
+    "borderRadius": {
+      "default": "0.25rem",
+      "md": "0.5rem",
+      "lg": "0.75rem",
+      "xl": "1rem",
+      "full": "9999px"
+    },
+    "spacing": {
+      "sidebar-width": "256px",
+      "header-height": "64px",
+      "card-padding": "24px",
+      "section-gap": "24px"
+    },
+    "shadows": {
+      "ambient": "0 12px 32px -4px rgba(25, 28, 30, 0.06)",
+      "ambient-md": "0 8px 20px -4px rgba(25, 28, 30, 0.08)",
+      "primary-glow": "0 4px 16px -2px rgba(0, 93, 172, 0.20)"
+    },
+    "gradients": {
+      "primary-cta": "linear-gradient(135deg, #005dac 0%, #1976d2 100%)"
+    }
+  }
+}

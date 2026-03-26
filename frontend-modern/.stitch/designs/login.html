@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Login | TaskFlow Pro</title>
+<!-- Google Fonts: Manrope & Inter -->
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "outline": "#717783",
+              "on-secondary": "#ffffff",
+              "inverse-primary": "#a5c8ff",
+              "background": "#f8f9fb",
+              "inverse-on-surface": "#eff1f3",
+              "tertiary": "#944700",
+              "secondary-fixed": "#d4e3ff",
+              "error": "#ba1a1a",
+              "outline-variant": "#c1c6d4",
+              "primary-fixed": "#d4e3ff",
+              "on-primary-fixed": "#001c3a",
+              "on-tertiary-fixed-variant": "#733600",
+              "surface-variant": "#e0e3e5",
+              "on-tertiary": "#ffffff",
+              "secondary-container": "#bad3fd",
+              "primary-fixed-dim": "#a5c8ff",
+              "on-secondary-fixed": "#001c3a",
+              "surface-tint": "#005faf",
+              "on-tertiary-fixed": "#311300",
+              "surface-container-high": "#e6e8ea",
+              "primary": "#005dac",
+              "secondary": "#475f84",
+              "on-surface-variant": "#414752",
+              "on-primary-fixed-variant": "#004786",
+              "on-secondary-fixed-variant": "#2f486a",
+              "secondary-fixed-dim": "#afc8f1",
+              "on-primary-container": "#fffdff",
+              "surface-container": "#eceef0",
+              "tertiary-fixed": "#ffdbc7",
+              "on-error": "#ffffff",
+              "error-container": "#ffdad6",
+              "tertiary-fixed-dim": "#ffb688",
+              "surface-container-highest": "#e0e3e5",
+              "surface-container-low": "#f2f4f6",
+              "surface-container-lowest": "#ffffff",
+              "on-error-container": "#93000a",
+              "inverse-surface": "#2d3133",
+              "on-tertiary-container": "#fffeff",
+              "on-primary": "#ffffff",
+              "surface-bright": "#f8f9fb",
+              "surface": "#f8f9fb",
+              "primary-container": "#1976d2",
+              "surface-dim": "#d8dadc",
+              "on-background": "#191c1e",
+              "on-surface": "#191c1e",
+              "tertiary-container": "#ba5b00",
+              "on-secondary-container": "#425b7f"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        display: inline-block;
+        line-height: 1;
+        text-transform: none;
+        letter-spacing: normal;
+        word-wrap: normal;
+        white-space: nowrap;
+        direction: ltr;
+      }
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+      h1, h2, h3, .brand-font {
+        font-family: 'Manrope', sans-serif;
+      }
+      .ambient-shadow {
+        box-shadow: 0 12px 32px -4px rgba(25, 28, 30, 0.06);
+      }
+      .primary-gradient {
+        background: linear-gradient(135deg, #005dac 0%, #1976d2 100%);
+      }
+    </style>
+</head>
+<body class="bg-surface-container-low min-h-screen flex flex-col items-center justify-center p-6 selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- Main Login Container -->
+<main class="w-full max-w-[440px] animate-in fade-in slide-in-from-bottom-4 duration-700">
+<!-- Surface Card -->
+<div class="bg-surface-container-lowest rounded-[1rem] p-8 md:p-10 ambient-shadow">
+<!-- Brand Identity -->
+<div class="flex flex-col items-center mb-10">
+<div class="w-12 h-12 flex items-center justify-center rounded-lg bg-primary-container/10 mb-4">
+<span class="material-symbols-outlined text-primary-container text-4xl" data-icon="task_alt">task_alt</span>
+</div>
+<h1 class="brand-font text-2xl font-extrabold tracking-tight text-primary-container">TaskFlow Pro</h1>
+</div>
+<!-- Header Section -->
+<div class="text-center mb-10">
+<h2 class="text-on-surface text-2xl font-bold mb-2">Welcome back</h2>
+<p class="text-on-surface-variant text-sm font-medium">Enter your details to access your dashboard.</p>
+</div>
+<!-- Login Form -->
+<form class="space-y-6" onsubmit="return false;">
+<!-- Email Field -->
+<div class="space-y-2">
+<label class="block text-xs font-bold uppercase tracking-widest text-on-surface-variant/80 ml-1" for="email">
+                        Email Address
+                    </label>
+<div class="relative group">
+<input class="w-full px-4 py-3 bg-surface rounded-lg border-0 ring-1 ring-outline-variant/40 focus:ring-2 focus:ring-primary outline-none transition-all duration-200 text-on-surface placeholder:text-outline-variant" id="email" name="email" placeholder="name@company.com" type="email"/>
+</div>
+</div>
+<!-- Password Field -->
+<div class="space-y-2">
+<label class="block text-xs font-bold uppercase tracking-widest text-on-surface-variant/80 ml-1" for="password">
+                        Password
+                    </label>
+<div class="relative group">
+<input class="w-full px-4 py-3 bg-surface rounded-lg border-0 ring-1 ring-outline-variant/40 focus:ring-2 focus:ring-primary outline-none transition-all duration-200 text-on-surface placeholder:text-outline-variant" id="password" name="password" placeholder="••••••••" type="password"/>
+<button class="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors" type="button">
+<span class="material-symbols-outlined text-[20px]" data-icon="visibility">visibility</span>
+</button>
+</div>
+</div>
+<!-- Actions Row -->
+<div class="flex items-center justify-between py-1">
+<label class="flex items-center space-x-2 cursor-pointer group">
+<div class="relative flex items-center">
+<input class="peer h-4 w-4 rounded border-outline-variant text-primary focus:ring-primary transition-all" type="checkbox"/>
+</div>
+<span class="text-sm font-medium text-on-surface-variant group-hover:text-on-surface transition-colors">Remember me</span>
+</label>
+<a class="text-sm font-semibold text-primary hover:underline transition-all" href="#">Forgot password?</a>
+</div>
+<!-- Primary Action -->
+<button class="w-full primary-gradient text-white font-bold py-4 rounded-lg shadow-lg shadow-primary-container/20 hover:shadow-xl hover:shadow-primary-container/30 transition-all active:scale-[0.98] duration-200" type="submit">
+                    Sign In
+                </button>
+</form>
+<!-- Divider -->
+<div class="relative my-10">
+<div aria-hidden="true" class="absolute inset-0 flex items-center">
+<div class="w-full border-t border-surface-container-highest"></div>
+</div>
+<div class="relative flex justify-center text-xs uppercase tracking-widest font-bold">
+<span class="bg-surface-container-lowest px-4 text-outline-variant">OR</span>
+</div>
+</div>
+<!-- Footer Section -->
+<div class="text-center">
+<p class="text-sm text-on-surface-variant font-medium">
+                    Don't have an account? 
+                    <a class="text-primary font-bold hover:underline transition-all ml-1" href="#">Register</a>
+</p>
+</div>
+</div>
+<!-- Decorative Subtle Element (Engineering Atelier Style) -->
+<div class="mt-8 flex justify-center space-x-8 opacity-40">
+<div class="flex items-center space-x-2 grayscale">
+<span class="material-symbols-outlined text-sm" data-icon="security">security</span>
+<span class="text-[10px] uppercase tracking-tighter font-bold">Encrypted</span>
+</div>
+<div class="flex items-center space-x-2 grayscale">
+<span class="material-symbols-outlined text-sm" data-icon="terminal">terminal</span>
+<span class="text-[10px] uppercase tracking-tighter font-bold">v4.2.0-stable</span>
+</div>
+</div>
+</main>
+<!-- Global Footer from Shared Components -->
+<footer class="fixed bottom-0 w-full flex flex-col md:flex-row justify-between items-center px-12 py-6 w-full bg-transparent">
+<p class="font-['Inter'] text-xs uppercase tracking-widest text-slate-400">© 2024 TaskFlow Pro. Engineered for Precision.</p>
+<div class="flex space-x-6 mt-4 md:mt-0">
+<a class="font-['Inter'] text-xs uppercase tracking-widest text-slate-400 hover:text-blue-500 underline opacity-80 hover:opacity-100 transition-opacity" href="#">Privacy Policy</a>
+<a class="font-['Inter'] text-xs uppercase tracking-widest text-slate-400 hover:text-blue-500 underline opacity-80 hover:opacity-100 transition-opacity" href="#">Terms of Service</a>
+<a class="font-['Inter'] text-xs uppercase tracking-widest text-slate-400 hover:text-blue-500 underline opacity-80 hover:opacity-100 transition-opacity" href="#">Security</a>
+<a class="font-['Inter'] text-xs uppercase tracking-widest text-slate-400 hover:text-blue-500 underline opacity-80 hover:opacity-100 transition-opacity" href="#">Help Center</a>
+</div>
+</footer>
+</body></html>

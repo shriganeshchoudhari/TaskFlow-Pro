@@ -45,7 +45,13 @@ public class SecurityConfig {
         "/actuator/prometheus",
         "/api-docs/**",
         "/swagger-ui/**",
-        "/swagger-ui.html"
+        "/swagger-ui.html",
+        // WebSocket HTTP-upgrade handshake and SockJS info/transport endpoints.
+        // The actual STOMP authentication is handled in WebSocketConfig's
+        // ChannelInterceptor via the Authorization header — Spring Security
+        // must permit the HTTP layer so the upgrade can proceed.
+        "/api/v1/ws/**",
+        "/ws/**"
     };
 
     @Bean

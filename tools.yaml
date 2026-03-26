@@ -1,0 +1,47 @@
+# Configuration file for MCP Toolbox for Databases Server
+# Documentation: https://googleapis.github.io/genai-toolbox/
+
+kind: sources
+name: taskflow_db
+type: postgres
+host: localhost
+port: 5432
+database: taskflow_dev
+user: postgres
+password: postgres
+
+---
+
+kind: tools
+name: get_tasks
+type: postgres-sql
+source: taskflow_db
+description: "Get a list of tasks from the database"
+parameters:
+  - name: limit
+    type: integer
+    description: "Number of tasks to return"
+    default: 10
+statement: "SELECT * FROM tasks LIMIT $1"
+
+---
+
+kind: tools
+name: get_user_by_id
+type: postgres-sql
+source: taskflow_db
+description: "Get a user by their ID"
+parameters:
+  - name: user_id
+    type: integer
+    description: "The ID of the user"
+statement: "SELECT * FROM users WHERE id = $1"
+
+---
+
+kind: toolsets
+name: taskflow_read_ops
+description: "Read operations for TaskFlow"
+tools:
+  - get_tasks
+  - get_user_by_id

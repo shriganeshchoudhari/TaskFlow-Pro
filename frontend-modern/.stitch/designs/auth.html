@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Luminous Observatory | Secure Access</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&amp;family=Inter:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-error-container": "#ffa8a3",
+                        "surface-container-low": "#0f141a",
+                        "background": "#0a0e14",
+                        "secondary-dim": "#bb00fc",
+                        "secondary-fixed-dim": "#eaaeff",
+                        "on-surface": "#f1f3fc",
+                        "inverse-primary": "#006880",
+                        "on-secondary-fixed": "#580079",
+                        "primary": "#69daff",
+                        "primary-dim": "#00c0ea",
+                        "on-secondary": "#390050",
+                        "secondary-container": "#9900cf",
+                        "tertiary-fixed-dim": "#00ec9a",
+                        "on-background": "#f1f3fc",
+                        "on-surface-variant": "#a8abb3",
+                        "on-primary-fixed-variant": "#004a5c",
+                        "tertiary-dim": "#00ec9a",
+                        "tertiary-container": "#1dfba5",
+                        "on-primary-container": "#004050",
+                        "outline": "#72757d",
+                        "on-tertiary-fixed": "#00452a",
+                        "primary-fixed-dim": "#00c0ea",
+                        "primary-container": "#00cffc",
+                        "error-dim": "#d7383b",
+                        "surface-container-high": "#1b2028",
+                        "surface-container-highest": "#20262f",
+                        "error-container": "#9f0519",
+                        "tertiary": "#9effc8",
+                        "surface-variant": "#20262f",
+                        "secondary-fixed": "#f1c1ff",
+                        "on-secondary-fixed-variant": "#8400b3",
+                        "on-tertiary": "#00643e",
+                        "on-error": "#490006",
+                        "tertiary-fixed": "#1dfba5",
+                        "error": "#ff716c",
+                        "on-tertiary-container": "#005a38",
+                        "inverse-on-surface": "#51555c",
+                        "surface": "#0a0e14",
+                        "inverse-surface": "#f8f9ff",
+                        "surface-container-lowest": "#000000",
+                        "surface-container": "#151a21",
+                        "on-primary": "#004a5d",
+                        "surface-dim": "#0a0e14",
+                        "surface-bright": "#262c36",
+                        "on-secondary-container": "#fff5fc",
+                        "on-tertiary-fixed-variant": "#00653f",
+                        "on-primary-fixed": "#002a35",
+                        "surface-tint": "#69daff",
+                        "outline-variant": "#44484f",
+                        "primary-fixed": "#00cffc",
+                        "secondary": "#d674ff"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 200, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0a0e14;
+            color: #f1f3fc;
+        }
+        h1, h2, h3, .font-headline {
+            font-family: 'Manrope', sans-serif;
+        }
+        .glass-panel {
+            background: rgba(32, 38, 47, 0.6);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+        }
+        .neon-glow {
+            box-shadow: 0 0 40px rgba(105, 218, 255, 0.08);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background min-h-screen flex items-center justify-center overflow-hidden">
+<!-- Ambient Background Elements -->
+<div class="fixed inset-0 pointer-events-none">
+<div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px]"></div>
+<div class="absolute bottom-[-5%] right-[-5%] w-[30%] h-[30%] bg-secondary/5 rounded-full blur-[100px]"></div>
+</div>
+<!-- Main Asymmetric Container -->
+<main class="relative w-full max-w-6xl px-6 grid grid-cols-1 md:grid-cols-12 gap-0 md:gap-16 items-center">
+<!-- Left Column: Branding & Data Narrative (Asymmetric Layout) -->
+<div class="md:col-span-5 mb-12 md:mb-0 space-y-8">
+<header class="space-y-4">
+<div class="inline-flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-3xl" data-icon="auto_awesome">auto_awesome</span>
+<span class="text-2xl font-black tracking-tighter bg-gradient-to-br from-primary to-primary-container bg-clip-text text-transparent">
+                        Luminous Observatory
+                    </span>
+</div>
+<h1 class="text-4xl md:text-5xl font-extrabold text-on-surface leading-tight tracking-tight">
+                    Behold the <span class="text-primary-dim">Digital Firmament.</span>
+</h1>
+<p class="text-on-surface-variant text-lg max-w-md leading-relaxed">
+                    Access the premium analytics engine designed for high-end aether analysts. Monitor orbits, signals, and celestial data streams in real-time.
+                </p>
+</header>
+<!-- Small Stat Component (The "Neon Sparkline" feel) -->
+<div class="flex items-center gap-6 p-6 surface-container-low rounded-xl bg-[#0f141a] max-w-xs outline-variant/15 outline outline-1">
+<div class="flex-1">
+<p class="text-[0.6875rem] font-label text-on-surface-variant uppercase tracking-widest">Global Sync</p>
+<p class="text-2xl font-headline font-bold text-tertiary">99.98%</p>
+</div>
+<div class="w-24 h-8 relative">
+<!-- Pure CSS Sparkline Representation -->
+<svg class="w-full h-full" viewbox="0 0 100 30">
+<path class="drop-shadow-[0_0_4px_rgba(158,255,200,0.5)]" d="M0,25 Q10,5 20,20 T40,10 T60,22 T80,5 T100,15" fill="none" stroke="#9effc8" stroke-width="2"></path>
+</svg>
+</div>
+</div>
+</div>
+<!-- Right Column: Authentication Form (Glassmorphism Card) -->
+<div class="md:col-span-7 relative">
+<!-- Decorative image element to break the "box" feel -->
+<div class="absolute -top-12 -right-12 w-48 h-48 opacity-20 pointer-events-none">
+<img alt="Celestial Sphere" class="w-full h-full object-contain" data-alt="abstract 3D geometric wireframe sphere glowing with cyan light floating in deep black space macro view" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCbyeLqr312JAvlNoEa8uoIi1HfOLfljA7x7UmWCx4kD_BoEvNZD_JOJeboRwUN6oxAk4ANcLothQS2fl_cogznwKPl2swLm-o8_eTNKpPiKUH3S6tqno4J3lrH8jq21eqMM3DoIBCHzQClvf9_igxSFOrr4JqxMZa3P04Q_3YxEClQW3o4gbPWJd0nU5elArx88PzSz9QMiCOIT9yW0wmhJThfT_1KDL1ibEQzuuJmpzdJsa_dBjFaMsaLOjnP87zjnHXfnK3Z_Mtk"/>
+</div>
+<div class="glass-panel p-8 md:p-12 rounded-3xl neon-glow relative overflow-hidden">
+<!-- Tabs / Toggle -->
+<nav class="flex gap-8 mb-10">
+<button class="relative pb-2 text-lg font-headline font-bold text-on-surface transition-colors">
+                        Login
+                        <span class="absolute bottom-0 left-0 w-8 h-1 bg-primary rounded-full"></span>
+</button>
+<button class="relative pb-2 text-lg font-headline font-bold text-on-surface-variant hover:text-on-surface transition-colors">
+                        Registration
+                    </button>
+</nav>
+<form class="space-y-6">
+<!-- Input Fields -->
+<div class="space-y-4">
+<div class="group">
+<label class="block text-[0.6875rem] font-label text-on-surface-variant uppercase tracking-widest mb-2 ml-1">Analytical ID (Email)</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-xl" data-icon="alternate_email">alternate_email</span>
+<input class="w-full bg-surface-container-highest border-none text-on-surface placeholder:text-on-surface-variant/40 rounded-xl py-4 pl-12 pr-4 focus:ring-2 focus:ring-primary/40 transition-all outline-none" placeholder="name@observatory.io" type="email"/>
+</div>
+</div>
+<div class="group">
+<label class="block text-[0.6875rem] font-label text-on-surface-variant uppercase tracking-widest mb-2 ml-1">Secure Key (Password)</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-xl" data-icon="lock">lock</span>
+<input class="w-full bg-surface-container-highest border-none text-on-surface placeholder:text-on-surface-variant/40 rounded-xl py-4 pl-12 pr-4 focus:ring-2 focus:ring-primary/40 transition-all outline-none" placeholder="••••••••••••" type="password"/>
+<button class="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors" type="button">
+<span class="material-symbols-outlined" data-icon="visibility">visibility</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Actions -->
+<div class="flex items-center justify-between py-2">
+<label class="flex items-center gap-3 cursor-pointer group">
+<input class="w-5 h-5 rounded border-none bg-surface-container-highest text-primary focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+<span class="text-sm text-on-surface-variant group-hover:text-on-surface transition-colors">Remember sequence</span>
+</label>
+<a class="text-sm text-primary hover:text-primary-container font-medium transition-colors" href="#">Recover credentials?</a>
+</div>
+<!-- Primary Action -->
+<button class="w-full bg-gradient-to-r from-primary to-primary-container text-on-primary-fixed font-headline font-bold py-4 rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 group">
+<span>Initialize Session</span>
+<span class="material-symbols-outlined transition-transform group-hover:translate-x-1" data-icon="arrow_forward">arrow_forward</span>
+</button>
+<!-- OAuth Separation -->
+<div class="relative py-4 flex items-center justify-center">
+<div class="absolute inset-0 flex items-center">
+<div class="w-full h-[1px] bg-outline-variant/20"></div>
+</div>
+<span class="relative px-4 bg-transparent text-[0.6875rem] font-label text-on-surface-variant uppercase tracking-widest">Multi-Auth Integration</span>
+</div>
+<!-- Social Grid -->
+<div class="grid grid-cols-2 gap-4">
+<button class="flex items-center justify-center gap-3 py-3 rounded-xl bg-surface-container-highest/40 hover:bg-surface-container-highest transition-all group" type="button">
+<span class="material-symbols-outlined text-xl" data-icon="account_circle">account_circle</span>
+<span class="text-sm font-medium">Enterprise SSO</span>
+</button>
+<button class="flex items-center justify-center gap-3 py-3 rounded-xl bg-surface-container-highest/40 hover:bg-surface-container-highest transition-all group" type="button">
+<span class="material-symbols-outlined text-xl text-secondary" data-icon="key">key</span>
+<span class="text-sm font-medium">Biometric Vault</span>
+</button>
+</div>
+</form>
+</div>
+<!-- Contextual Decorative Metric (Floating Level) -->
+<div class="absolute -bottom-6 -left-6 hidden md:block">
+<div class="surface-bright p-4 rounded-xl shadow-2xl glass-panel outline-variant/15 outline outline-1 max-w-[180px]">
+<div class="flex items-center gap-3 mb-2">
+<div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+<span class="text-[0.6rem] font-label text-on-surface-variant uppercase">Network Latency</span>
+</div>
+<div class="text-lg font-headline font-bold text-on-surface">12ms <span class="text-xs font-normal text-tertiary">(-4ms)</span></div>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer Copyright/Legal (Micro-Data) -->
+<footer class="fixed bottom-8 w-full flex justify-center px-6 pointer-events-none">
+<div class="flex gap-8 text-[0.6875rem] font-label text-on-surface-variant/40 uppercase tracking-widest pointer-events-auto">
+<span>© 2024 Luminous Systems</span>
+<a class="hover:text-primary transition-colors" href="#">Privacy Protocols</a>
+<a class="hover:text-primary transition-colors" href="#">Security Manifest</a>
+</div>
+</footer>
+</body></html>

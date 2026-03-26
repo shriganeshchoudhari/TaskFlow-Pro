@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>TaskFlow Pro | Enterprise Dashboard</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Manrope:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#004583",
+              "surface-container-highest": "#e1e2e4",
+              "on-secondary": "#ffffff",
+              "on-tertiary-fixed": "#321200",
+              "on-surface": "#191c1e",
+              "outline": "#727783",
+              "tertiary": "#733200",
+              "on-surface-variant": "#414751",
+              "surface": "#f8f9fb",
+              "tertiary-fixed-dim": "#ffb68d",
+              "surface-container-high": "#e7e8ea",
+              "on-background": "#191c1e",
+              "error": "#ba1a1a",
+              "surface-container-low": "#f2f4f6",
+              "primary-container": "#005dac",
+              "on-error-container": "#93000a",
+              "error-container": "#ffdad6",
+              "on-primary": "#ffffff",
+              "background": "#f8f9fb",
+              "on-error": "#ffffff",
+              "inverse-primary": "#a6c8ff",
+              "surface-tint": "#065fae",
+              "secondary-fixed": "#d4e3ff",
+              "tertiary-container": "#984400",
+              "inverse-surface": "#2e3132",
+              "on-secondary-container": "#495e7e",
+              "on-primary-fixed-variant": "#004786",
+              "secondary-fixed-dim": "#b2c8ed",
+              "on-secondary-fixed-variant": "#324866",
+              "on-secondary-fixed": "#021c39",
+              "surface-dim": "#d9dadc",
+              "surface-container": "#edeef0",
+              "secondary-container": "#c3d8fe",
+              "primary-fixed-dim": "#a6c8ff",
+              "on-tertiary": "#ffffff",
+              "on-primary-container": "#bfd7ff",
+              "outline-variant": "#c1c6d3",
+              "primary-fixed": "#d4e3ff",
+              "on-tertiary-fixed-variant": "#763300",
+              "inverse-on-surface": "#f0f1f3",
+              "surface-container-lowest": "#ffffff",
+              "tertiary-fixed": "#ffdbc9",
+              "secondary": "#4a5f7f",
+              "surface-variant": "#e1e2e4",
+              "on-tertiary-container": "#ffcbaf",
+              "surface-bright": "#f8f9fb",
+              "on-primary-fixed": "#001c3a"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .shadow-ambient-md {
+            box-shadow: 0 40px 80px -20px rgba(25, 28, 30, 0.06);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface font-body text-on-surface antialiased pb-32">
+<!-- TopAppBar -->
+<header class="sticky top-0 w-full z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none">
+<div class="flex justify-between items-center px-6 md:px-12 py-6 max-w-[1920px] mx-auto">
+<div class="flex items-center gap-4">
+<div class="p-2 rounded-xl bg-slate-100/50 dark:hover:bg-slate-800/50 transition-colors duration-300">
+<span class="material-symbols-outlined text-blue-700 dark:text-blue-400" data-icon="grid_view">grid_view</span>
+</div>
+<h1 class="text-2xl font-black bg-gradient-to-br from-blue-600 to-blue-800 bg-clip-text text-transparent font-headline tracking-tight">TaskFlow Pro</h1>
+</div>
+<div class="hidden md:flex flex-1 max-w-md mx-8">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline" data-icon="search">search</span>
+<input class="w-full bg-surface-container-highest border-none rounded-xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary-container transition-all" placeholder="Search tasks, projects..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined p-2 text-on-surface-variant hover:bg-slate-100/50 rounded-full transition-colors" data-icon="notifications">notifications</button>
+<div class="h-10 w-10 rounded-full bg-primary-fixed overflow-hidden flex items-center justify-center ring-2 ring-white shadow-sm">
+<img alt="User profile" data-alt="Professional headshot of a smiling executive in a modern office setting with soft natural window lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCxLv-q48p-6NlnYofQSfXIyRX-G5-gAghT4MWY6EbcZDUiQjrCxaXhU6oC4AFoKET4NykbHQeTT1XDEmQCzUlhu2ov8wMMWaRkfK3XPmSxp8VWtEqS5GBRBw2jT95jsxKmvu2rev9refIJcfPG64fSlX6W2wvQt7pIXsSMfMpIqv9lSHb6LRQvIbtMtfl3A1s1GCIMs55AaqMlaLk69nVbGagxofLeZuJC0gsmQNJJwVMNoxWGA-MpumgTLGxzZQnPLN-tqB7ziJTN"/>
+</div>
+</div>
+</div>
+</header>
+<main class="max-w-[1920px] mx-auto px-6 md:px-12 pt-12">
+<!-- Dashboard Headline Section -->
+<section class="mb-16">
+<h2 class="text-5xl md:text-6xl font-headline font-extrabold tracking-tight text-on-surface mb-4">Dashboard</h2>
+<p class="text-lg text-on-surface-variant max-w-2xl font-body leading-relaxed">Welcome back, Alex. You have <span class="text-primary font-semibold">12 active tasks</span> across 4 projects requiring your attention today.</p>
+</section>
+<!-- Metrics Bento Grid -->
+<section class="grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-10 mb-20">
+<!-- Metric Card 1 -->
+<div class="bg-surface-container-lowest p-8 rounded-[32px] shadow-ambient-md border-none flex flex-col justify-between aspect-square lg:aspect-auto min-h-[220px]">
+<div class="flex items-start justify-between">
+<div class="p-3 bg-blue-50 text-blue-700 rounded-2xl">
+<span class="material-symbols-outlined" data-icon="trending_up">trending_up</span>
+</div>
+<span class="text-xs font-bold text-green-600 bg-green-50 px-3 py-1 rounded-full">+12%</span>
+</div>
+<div>
+<span class="block text-4xl font-headline font-bold text-on-surface mb-1">84%</span>
+<span class="text-sm font-medium text-on-surface-variant uppercase tracking-widest">Completion Rate</span>
+</div>
+</div>
+<!-- Metric Card 2 -->
+<div class="bg-surface-container-lowest p-8 rounded-[32px] shadow-ambient-md border-none flex flex-col justify-between aspect-square lg:aspect-auto min-h-[220px]">
+<div class="flex items-start justify-between">
+<div class="p-3 bg-orange-50 text-orange-700 rounded-2xl">
+<span class="material-symbols-outlined" data-icon="schedule">schedule</span>
+</div>
+</div>
+<div>
+<span class="block text-4xl font-headline font-bold text-on-surface mb-1">24.5h</span>
+<span class="text-sm font-medium text-on-surface-variant uppercase tracking-widest">Avg. Velocity</span>
+</div>
+</div>
+<!-- Metric Card 3 -->
+<div class="bg-surface-container-lowest p-8 rounded-[32px] shadow-ambient-md border-none flex flex-col justify-between aspect-square lg:aspect-auto min-h-[220px]">
+<div class="flex items-start justify-between">
+<div class="p-3 bg-purple-50 text-purple-700 rounded-2xl">
+<span class="material-symbols-outlined" data-icon="folder_special">folder_special</span>
+</div>
+</div>
+<div>
+<span class="block text-4xl font-headline font-bold text-on-surface mb-1">08</span>
+<span class="text-sm font-medium text-on-surface-variant uppercase tracking-widest">Active Sprints</span>
+</div>
+</div>
+<!-- Metric Card 4 -->
+<div class="bg-surface-container-lowest p-8 rounded-[32px] shadow-ambient-md border-none flex flex-col justify-between aspect-square lg:aspect-auto min-h-[220px]">
+<div class="flex items-start justify-between">
+<div class="p-3 bg-teal-50 text-teal-700 rounded-2xl">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+</div>
+<span class="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">New</span>
+</div>
+<div>
+<span class="block text-4xl font-headline font-bold text-on-surface mb-1">32</span>
+<span class="text-sm font-medium text-on-surface-variant uppercase tracking-widest">Team Members</span>
+</div>
+</div>
+</section>
+<!-- Main Content Area: Asymmetric Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-16">
+<!-- Left Column: Active Tasks (8 cols) -->
+<section class="lg:col-span-8">
+<div class="flex items-center justify-between mb-8">
+<h3 class="text-2xl font-headline font-bold">Active Tasks</h3>
+<button class="text-primary font-semibold text-sm flex items-center gap-1 hover:underline">
+                        View All <span class="material-symbols-outlined text-sm" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+<div class="space-y-4">
+<!-- Task Item 1 -->
+<div class="bg-surface-container-lowest p-6 rounded-[24px] shadow-ambient-md flex items-center justify-between transition-all hover:scale-[1.01] duration-300">
+<div class="flex items-center gap-6">
+<div class="h-12 w-12 rounded-2xl bg-primary-container/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="architecture">architecture</span>
+</div>
+<div>
+<h4 class="font-bold text-lg text-on-surface">Design System Architecture Refresh</h4>
+<p class="text-sm text-outline">Project: Lumina Core • Due Tomorrow</p>
+</div>
+</div>
+<div class="flex items-center gap-8">
+<span class="hidden md:flex bg-secondary-fixed text-on-secondary-fixed px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider">In Progress</span>
+<span class="material-symbols-outlined text-outline cursor-pointer" data-icon="more_vert">more_vert</span>
+</div>
+</div>
+<!-- Task Item 2 -->
+<div class="bg-surface-container-lowest p-6 rounded-[24px] shadow-ambient-md flex items-center justify-between transition-all hover:scale-[1.01] duration-300">
+<div class="flex items-center gap-6">
+<div class="h-12 w-12 rounded-2xl bg-tertiary-fixed/30 flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined" data-icon="database">database</span>
+</div>
+<div>
+<h4 class="font-bold text-lg text-on-surface">API Endpoint Security Audit</h4>
+<p class="text-sm text-outline">Project: Infrastructure • Due in 3 days</p>
+</div>
+</div>
+<div class="flex items-center gap-8">
+<span class="hidden md:flex bg-orange-100 text-orange-800 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider">Review Required</span>
+<span class="material-symbols-outlined text-outline cursor-pointer" data-icon="more_vert">more_vert</span>
+</div>
+</div>
+<!-- Task Item 3 -->
+<div class="bg-surface-container-lowest p-6 rounded-[24px] shadow-ambient-md flex items-center justify-between transition-all hover:scale-[1.01] duration-300">
+<div class="flex items-center gap-6">
+<div class="h-12 w-12 rounded-2xl bg-green-50 flex items-center justify-center text-green-700">
+<span class="material-symbols-outlined" data-icon="campaign">campaign</span>
+</div>
+<div>
+<h4 class="font-bold text-lg text-on-surface">Q3 Marketing Strategy Session</h4>
+<p class="text-sm text-outline">Project: Growth • Scheduled 2:00 PM</p>
+</div>
+</div>
+<div class="flex items-center gap-8">
+<span class="hidden md:flex bg-blue-50 text-blue-700 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider">Planned</span>
+<span class="material-symbols-outlined text-outline cursor-pointer" data-icon="more_vert">more_vert</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Right Column: Activity Feed (4 cols) -->
+<section class="lg:col-span-4">
+<h3 class="text-2xl font-headline font-bold mb-8">Activity Feed</h3>
+<div class="relative pl-8 space-y-12">
+<!-- Vertical Line -->
+<div class="absolute left-[11px] top-2 bottom-2 w-[2px] bg-outline-variant opacity-30"></div>
+<!-- Activity 1 -->
+<div class="relative">
+<div class="absolute -left-[29px] top-1 h-5 w-5 rounded-full bg-primary ring-4 ring-surface flex items-center justify-center">
+<div class="h-2 w-2 rounded-full bg-white"></div>
+</div>
+<div>
+<p class="text-sm font-bold text-on-surface">Sarah Connor <span class="font-normal text-on-surface-variant">commented on</span> Hero Section Specs</p>
+<p class="text-xs text-outline mt-1">12 minutes ago</p>
+<div class="mt-3 p-4 bg-surface-container-low rounded-2xl text-sm italic text-on-surface-variant border-none">
+                                "The contrast ratio on the primary CTA needs to be at least 4.5:1 for accessibility."
+                            </div>
+</div>
+</div>
+<!-- Activity 2 -->
+<div class="relative">
+<div class="absolute -left-[29px] top-1 h-5 w-5 rounded-full bg-outline-variant ring-4 ring-surface flex items-center justify-center">
+<div class="h-2 w-2 rounded-full bg-white"></div>
+</div>
+<div>
+<p class="text-sm font-bold text-on-surface">Mark J. <span class="font-normal text-on-surface-variant">completed</span> Database Migration</p>
+<p class="text-xs text-outline mt-1">2 hours ago</p>
+</div>
+</div>
+<!-- Activity 3 -->
+<div class="relative">
+<div class="absolute -left-[29px] top-1 h-5 w-5 rounded-full bg-outline-variant ring-4 ring-surface flex items-center justify-center">
+<div class="h-2 w-2 rounded-full bg-white"></div>
+</div>
+<div>
+<p class="text-sm font-bold text-on-surface">System Update <span class="font-normal text-on-surface-variant">deployed to</span> Staging</p>
+<p class="text-xs text-outline mt-1">Yesterday at 11:45 PM</p>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Shell) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-6 pb-8 pt-4 bg-white/90 dark:bg-slate-950/90 backdrop-blur-2xl shadow-[0_-10px_40px_rgba(0,0,0,0.05)] rounded-t-[32px] md:hidden">
+<a class="flex flex-col items-center justify-center bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-2xl px-6 py-2.5 transition-transform duration-200 active:scale-90" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="dashboard" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span class="font-inter text-[11px] font-semibold tracking-wide uppercase">Dashboard</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 px-6 py-2.5 hover:text-blue-500 transition-transform duration-200 active:scale-90" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="folder_open">folder_open</span>
+<span class="font-inter text-[11px] font-semibold tracking-wide uppercase">Projects</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 px-6 py-2.5 hover:text-blue-500 transition-transform duration-200 active:scale-90" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="assignment_turned_in">assignment_turned_in</span>
+<span class="font-inter text-[11px] font-semibold tracking-wide uppercase">Tasks</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 px-6 py-2.5 hover:text-blue-500 transition-transform duration-200 active:scale-90" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="settings">settings</span>
+<span class="font-inter text-[11px] font-semibold tracking-wide uppercase">Settings</span>
+</a>
+</nav>
+<!-- Contextual FAB (Dashboard relevant) -->
+<button class="fixed right-6 bottom-32 md:bottom-12 h-16 w-16 bg-gradient-to-br from-blue-600 to-blue-800 text-white rounded-2xl shadow-xl flex items-center justify-center hover:scale-105 transition-transform duration-200 active:scale-95 group z-40">
+<span class="material-symbols-outlined text-3xl group-hover:rotate-90 transition-transform duration-300" data-icon="add">add</span>
+</button>
+</body></html>
